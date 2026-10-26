@@ -169,6 +169,7 @@ button, input { font: inherit; }
 .table-card td small { display: block; margin-top: .2rem; color: #8792a2; }
 .clickable-row { cursor: pointer; }
 .clickable-row:hover { background: #f4f8fc; }
+.clickable-row:focus-visible { outline: 2px solid #2575b5; outline-offset: -2px; background: #edf6fc; }
 .ref-cell { color: #1767ab !important; font-weight: 750; }
 .amount-due { color: #c24936 !important; font-weight: 750; }
 .status { display: inline-flex; align-items: center; border-radius: 999px; padding: .28rem .55rem; font-size: .71rem; font-weight: 750; white-space: nowrap; }
