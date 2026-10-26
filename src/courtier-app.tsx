@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Activity,
   BadgeCent,
   Bell,
-  BookOpenCheck,
   BriefcaseBusiness,
   Building2,
   CalendarClock,
@@ -19,15 +18,14 @@ import {
   FilePlus2,
   Files,
   Gauge,
-  HandCoins,
-  Landmark,
-  Menu,
+  LoaderCircle,
+  LogOut,
+  LockKeyhole,
   PackageCheck,
   Plus,
   ReceiptText,
   RefreshCcw,
   Search,
-  Settings,
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
@@ -68,6 +66,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
 import { Claim, Client, createDemoData, DemoData, Offer, Opportunity, Policy, Proposal, companies, products, users } from "@/src/demo-data";
+import { apiBackoffice, enregistrerSession, oublierSession, ReponseAuthentification, RoleBackoffice, StatutBackoffice, UtilisateurBackoffice } from "@/src/services/api-backoffice";
 
 const STORAGE_KEY = "gestion-courtage-demo-v1";
 const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XAF", maximumFractionDigits: 0 });
@@ -84,7 +83,7 @@ const navGroups: Array<{ label: string; items: Array<{ id: ModuleId; label: stri
   { label: "Finance", items: [{ id: "invoices", label: "Factures", icon: ReceiptText }, { id: "payments", label: "Paiements", icon: WalletCards }, { id: "commissions", label: "Commissions", icon: BadgeCent }] },
   { label: "Gestion", items: [{ id: "documents", label: "Documents", icon: Files }, { id: "renewals", label: "Renouvellements", icon: CalendarClock }, { id: "claims", label: "Sinistres", icon: TriangleAlert }] },
   { label: "Pilotage", items: [{ id: "reports", label: "Rapports", icon: ChartNoAxesCombined }] },
-  { label: "Administration", items: [{ id: "users", label: "Utilisateurs", icon: UserCog }, { id: "roles", label: "Rôles", icon: BookOpenCheck }, { id: "settings", label: "Paramètres", icon: Settings }] },
+  { label: "Administration", items: [{ id: "users", label: "Utilisateurs", icon: UserCog }] },
 ];
 
 const moduleLabels = Object.fromEntries(navGroups.flatMap((group) => group.items.map((item) => [item.id, item.label]))) as Record<ModuleId, string>;
@@ -117,7 +116,64 @@ function NavItem({ item, current, onSelect }: { item: { id: ModuleId; label: str
   return <SidebarMenuItem><SidebarMenuButton onClick={() => { onSelect(item.id); if (isMobile) setOpenMobile(false); }} isActive={current===item.id} tooltip={item.label} className="h-9 text-blue-100 hover:bg-white/10 hover:text-white data-[active=true]:bg-white data-[active=true]:text-[#15385f]"><item.icon/><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>;
 }
 
-function Login({ onConnect }: { onConnect: () => void }) {
+function Login({ onConnect }: { onConnect: (utilisateur: UtilisateurBackoffice) => void }) {
+  const [adresseEmail, setAdresseEmail] = useState("");
+  const [motDePasse, setMotDePasse] = useState("");
+  const [nouveauMotDePasse, setNouveauMotDePasse] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [code, setCode] = useState("");
+  const [etape, setEtape] = useState<"connexion" | "mot_de_passe" | "mfa" | "configuration_mfa">("connexion");
+  const [defi, setDefi] = useState("");
+  const [secretTotp, setSecretTotp] = useState("");
+  const [erreur, setErreur] = useState("");
+  const [chargement, setChargement] = useState(false);
+
+  const traiter = (reponse: ReponseAuthentification) => {
+    if (reponse.statut === "connecte") {
+      enregistrerSession(reponse);
+      onConnect(reponse.utilisateur);
+      return;
+    }
+    setDefi(reponse.defi);
+    if (reponse.statut === "mot_de_passe_a_changer") setEtape("mot_de_passe");
+    if (reponse.statut === "mfa_requis") setEtape("mfa");
+    if (reponse.statut === "configuration_mfa_requise") {
+      setSecretTotp(reponse.secret_totp);
+      setEtape("configuration_mfa");
+    }
+  };
+
+  const executer = async (action: () => Promise<ReponseAuthentification>) => {
+    setErreur("");
+    setChargement(true);
+    try {
+      traiter(await action());
+    } catch (cause) {
+      setErreur(cause instanceof Error ? cause.message : "La connexion a échoué.");
+    } finally {
+      setChargement(false);
+    }
+  };
+
+  const soumettreConnexion = (event: React.FormEvent) => {
+    event.preventDefault();
+    void executer(() => apiBackoffice.connecter(adresseEmail, motDePasse));
+  };
+
+  const soumettreMotDePasse = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (nouveauMotDePasse !== confirmation) {
+      setErreur("Les mots de passe ne correspondent pas.");
+      return;
+    }
+    void executer(() => apiBackoffice.changerMotDePasse(defi, nouveauMotDePasse));
+  };
+
+  const soumettreMfa = (event: React.FormEvent) => {
+    event.preventDefault();
+    void executer(() => apiBackoffice.verifierMfa(defi, code, etape === "configuration_mfa"));
+  };
+
   return <main className="login-shell">
     <section className="login-story">
       <div className="brand-mark brand-mark--light">GC</div>
@@ -126,14 +182,63 @@ function Login({ onConnect }: { onConnect: () => void }) {
     </section>
     <section className="login-panel"><div className="login-card">
       <div className="brand-mobile"><div className="brand-mark">GC</div><span>Gestion du courtage</span></div>
-      <p className="eyebrow">Démonstration</p><h2>Bienvenue</h2><p className="login-card__intro">Connectez-vous pour accéder au tableau de bord.</p>
-      <Label>Adresse e-mail</Label><Input className="mb-4 mt-2 h-11" defaultValue="direction@demonstration.local" type="email" />
-      <Label>Mot de passe</Label><Input className="mb-5 mt-2 h-11" defaultValue="demonstration" type="password" />
-      <Button className="h-11 w-full" onClick={onConnect}>Se connecter</Button>
-      <Button className="mt-3 h-11 w-full" variant="outline" onClick={onConnect}>Accéder à la démonstration</Button>
-      <p className="demo-note">Aucune donnée réelle n’est utilisée dans cet environnement.</p>
+      <p className="eyebrow">Accès sécurisé</p><h2>{etape === "connexion" ? "Bienvenue" : etape === "mot_de_passe" ? "Nouveau mot de passe" : "Vérification en deux étapes"}</h2>
+      {etape === "connexion" && <form onSubmit={soumettreConnexion}>
+        <p className="login-card__intro">Connectez-vous avec votre compte interne Follow-Up.</p>
+        <Label>Adresse e-mail</Label><Input className="mb-4 mt-2 h-11" value={adresseEmail} onChange={(event)=>setAdresseEmail(event.target.value)} autoComplete="username" required type="email" />
+        <Label>Mot de passe</Label><Input className="mb-5 mt-2 h-11" value={motDePasse} onChange={(event)=>setMotDePasse(event.target.value)} autoComplete="current-password" required type="password" />
+        {erreur && <p className="auth-error">{erreur}</p>}
+        <Button className="h-11 w-full" disabled={chargement} type="submit">{chargement ? <LoaderCircle className="animate-spin"/> : <LockKeyhole/>}Se connecter</Button>
+      </form>}
+      {etape === "mot_de_passe" && <form onSubmit={soumettreMotDePasse}>
+        <p className="login-card__intro">Votre mot de passe temporaire doit être remplacé avant le premier accès.</p>
+        <Label>Nouveau mot de passe</Label><Input className="mb-4 mt-2 h-11" minLength={15} value={nouveauMotDePasse} onChange={(event)=>setNouveauMotDePasse(event.target.value)} autoComplete="new-password" required type="password" />
+        <Label>Confirmer le mot de passe</Label><Input className="mb-5 mt-2 h-11" minLength={15} value={confirmation} onChange={(event)=>setConfirmation(event.target.value)} autoComplete="new-password" required type="password" />
+        {erreur && <p className="auth-error">{erreur}</p>}
+        <Button className="h-11 w-full" disabled={chargement} type="submit">Continuer</Button>
+      </form>}
+      {(etape === "mfa" || etape === "configuration_mfa") && <form onSubmit={soumettreMfa}>
+        <p className="login-card__intro">{etape === "configuration_mfa" ? "Ajoutez d’abord cette clé dans Google Authenticator, Microsoft Authenticator ou toute application TOTP, puis saisissez le code généré." : "Saisissez le code à 6 chiffres de votre application d’authentification."}</p>
+        {etape === "configuration_mfa" && <div className="totp-secret"><span>Clé de configuration</span><strong>{secretTotp}</strong></div>}
+        <Label>Code de sécurité</Label><Input className="mb-5 mt-2 h-11" inputMode="numeric" maxLength={6} pattern="[0-9]{6}" value={code} onChange={(event)=>setCode(event.target.value.replace(/\D/g,""))} autoComplete="one-time-code" required />
+        {erreur && <p className="auth-error">{erreur}</p>}
+        <Button className="h-11 w-full" disabled={chargement} type="submit">Vérifier et continuer</Button>
+      </form>}
+      <p className="demo-note">Accès réservé aux collaborateurs autorisés.</p>
     </div></section>
   </main>;
+}
+
+const libellesRoles: Record<RoleBackoffice, string> = { courtier: "Courtier", admin: "Administrateur", super_admin: "Super-administrateur" };
+
+function UsersView() {
+  const [utilisateurs, setUtilisateurs] = useState<UtilisateurBackoffice[]>([]);
+  const [chargement, setChargement] = useState(true);
+  const [dialogueCreation, setDialogueCreation] = useState(false);
+  const [selection, setSelection] = useState<UtilisateurBackoffice | null>(null);
+  const [nom, setNom] = useState(""); const [email, setEmail] = useState(""); const [telephone, setTelephone] = useState("");
+  const [role, setRole] = useState<RoleBackoffice>("courtier"); const [statutCompte, setStatutCompte] = useState<StatutBackoffice>("actif"); const [motDePasse, setMotDePasse] = useState("");
+
+  const charger = async () => {
+    setChargement(true);
+    try { setUtilisateurs(await apiBackoffice.listerUtilisateurs()); }
+    catch (cause) { toast.error(cause instanceof Error ? cause.message : "Impossible de charger les utilisateurs."); }
+    finally { setChargement(false); }
+  };
+  useEffect(()=>{let actif=true;apiBackoffice.listerUtilisateurs().then((liste)=>{if(actif)setUtilisateurs(liste);}).catch((cause)=>{if(actif)toast.error(cause instanceof Error ? cause.message : "Impossible de charger les utilisateurs.");}).finally(()=>{if(actif)setChargement(false);});return()=>{actif=false};},[]);
+
+  const ouvrirCreation = () => { setNom("");setEmail("");setTelephone("");setRole("courtier");setStatutCompte("actif");setMotDePasse("");setDialogueCreation(true); };
+  const ouvrirModification = (utilisateur: UtilisateurBackoffice) => { setSelection(utilisateur);setNom(utilisateur.nom_complet);setTelephone(utilisateur.numero_telephone);setRole(utilisateur.role);setStatutCompte(utilisateur.statut);setMotDePasse(""); };
+  const creer = async () => { try { await apiBackoffice.creerUtilisateur({nom_complet:nom,adresse_email:email,numero_telephone:telephone,role,mot_de_passe_temporaire:motDePasse});setDialogueCreation(false);toast.success("Compte créé avec un mot de passe temporaire.");await charger(); } catch(cause){toast.error(cause instanceof Error?cause.message:"Création impossible.");} };
+  const modifier = async () => { if(!selection)return;try{await apiBackoffice.modifierUtilisateur(selection.id,{nom_complet:nom,numero_telephone:telephone,role,statut:statutCompte});setSelection(null);toast.success("Compte mis à jour.");await charger();}catch(cause){toast.error(cause instanceof Error?cause.message:"Modification impossible.");} };
+  const reinitialiser = async () => { if(!selection||motDePasse.length<15)return;try{await apiBackoffice.reinitialiserMotDePasse(selection.id,motDePasse);setSelection(null);toast.success("Mot de passe temporaire enregistré. Les sessions actives ont été révoquées.");await charger();}catch(cause){toast.error(cause instanceof Error?cause.message:"Réinitialisation impossible.");} };
+
+  const formulaire = <div className="user-form"><Label>Nom complet</Label><Input value={nom} onChange={(e)=>setNom(e.target.value)}/>{dialogueCreation&&<><Label>Adresse e-mail</Label><Input type="email" value={email} onChange={(e)=>setEmail(e.target.value)}/></>}<Label>Numéro de téléphone</Label><Input value={telephone} onChange={(e)=>setTelephone(e.target.value)}/><Label>Rôle</Label><Select value={role} onValueChange={(valeur)=>setRole(valeur as RoleBackoffice)}><SelectTrigger className="w-full"><SelectValue/></SelectTrigger><SelectContent>{Object.entries(libellesRoles).map(([valeur,libelle])=><SelectItem key={valeur} value={valeur}>{libelle}</SelectItem>)}</SelectContent></Select>{!dialogueCreation&&<><Label>Statut</Label><Select value={statutCompte} onValueChange={(valeur)=>setStatutCompte(valeur as StatutBackoffice)}><SelectTrigger className="w-full"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="actif">Actif</SelectItem><SelectItem value="bloque">Bloqué</SelectItem></SelectContent></Select></>}<Label>{dialogueCreation?"Mot de passe temporaire":"Nouveau mot de passe temporaire (facultatif)"}</Label><Input type="password" minLength={15} value={motDePasse} onChange={(e)=>setMotDePasse(e.target.value)} placeholder="15 caractères minimum"/></div>;
+
+  return <><PageHeading eyebrow="Administration" title="Utilisateurs du Backoffice" subtitle="Créez les accès internes et attribuez les rôles autorisés." action={<Button onClick={ouvrirCreation}><Plus/>Ajouter un utilisateur</Button>}/>{chargement?<div className="loading-state"><LoaderCircle className="animate-spin"/>Chargement…</div>:<div className="user-grid">{utilisateurs.map((utilisateur)=><button type="button" className="user-card user-card--button" key={utilisateur.id} onClick={()=>ouvrirModification(utilisateur)}><div className="user-avatar">{utilisateur.nom_complet.split(" ").map((n)=>n[0]).join("").slice(0,2)}</div><div><strong>{utilisateur.nom_complet}</strong><span>{utilisateur.adresse_email}</span><Badge variant="secondary">{libellesRoles[utilisateur.role]}</Badge>{utilisateur.mfa_active&&<small>MFA actif</small>}</div><StatusBadge value={utilisateur.statut}/></button>)}</div>}
+    <Dialog open={dialogueCreation} onOpenChange={setDialogueCreation}><DialogContent><DialogHeader><DialogTitle>Créer un accès Backoffice</DialogTitle><DialogDescription>L’utilisateur changera ce mot de passe lors de sa première connexion.</DialogDescription></DialogHeader>{formulaire}<DialogFooter><Button variant="outline" onClick={()=>setDialogueCreation(false)}>Annuler</Button><Button disabled={!nom||!email||motDePasse.length<15} onClick={()=>void creer()}>Créer le compte</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={Boolean(selection)} onOpenChange={(ouvert)=>!ouvert&&setSelection(null)}><DialogContent><DialogHeader><DialogTitle>Modifier l’utilisateur</DialogTitle><DialogDescription>{selection?.adresse_email}</DialogDescription></DialogHeader>{formulaire}<DialogFooter className="user-dialog-actions"><Button variant="outline" disabled={motDePasse.length<15} onClick={()=>void reinitialiser()}>Réinitialiser le mot de passe</Button><Button onClick={()=>void modifier()}>Enregistrer</Button></DialogFooter></DialogContent></Dialog>
+  </>;
 }
 
 function DashboardView({ data, goTo }: { data: DemoData; goTo: (id: ModuleId) => void }) {
@@ -275,12 +380,14 @@ function ProposalWizard({ open, data, onClose, onCreate }: { open:boolean; data:
 function PaymentDialog({ open, data, onClose, onCreate }: { open:boolean; data:DemoData; onClose:()=>void; onCreate:(invoiceId:string,amount:number)=>void }) { const candidates=data.invoices.filter((i)=>i.amount>i.paid).slice(0,40);const [invoiceId,setInvoiceId]=useState(candidates[0]?.id??"");const invoice=data.invoices.find((i)=>i.id===invoiceId);const [amount,setAmount]=useState(invoice?invoice.amount-invoice.paid:0);useEffect(()=>{if(invoice)setAmount(invoice.amount-invoice.paid)},[invoiceId]);return <Dialog open={open} onOpenChange={(value)=>!value&&onClose()}><DialogContent><DialogHeader><DialogTitle>Enregistrer un paiement</DialogTitle><DialogDescription>Affectez un encaissement fictif à une facture existante.</DialogDescription></DialogHeader><Label>Facture</Label><Select value={invoiceId} onValueChange={setInvoiceId}><SelectTrigger className="w-full"><SelectValue/></SelectTrigger><SelectContent>{candidates.map((i)=><SelectItem key={i.id} value={i.id}>{i.id} · {data.clients.find((c)=>c.id===i.clientId)?.name} · solde {shortMoney(i.amount-i.paid)}</SelectItem>)}</SelectContent></Select><Label>Montant</Label><Input type="number" value={amount} onChange={(e)=>setAmount(Number(e.target.value))}/><Label>Mode</Label><Select defaultValue="Mobile Money"><SelectTrigger className="w-full"><SelectValue/></SelectTrigger><SelectContent>{["Espèces","Virement","Mobile Money","Orange Money","Carte bancaire"].map((m)=><SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select><DialogFooter><Button variant="outline" onClick={onClose}>Annuler</Button><Button disabled={!invoiceId||amount<=0} onClick={()=>onCreate(invoiceId,amount)}>Affecter le paiement</Button></DialogFooter></DialogContent></Dialog> }
 
 export function CourtierApp() {
-  const [connected,setConnected]=useState(false);
+  const [utilisateurConnecte,setUtilisateurConnecte]=useState<UtilisateurBackoffice|null|undefined>(undefined);
   const [active,setActive]=useState<ModuleId>("dashboard");
   const [data,setData]=useState<DemoData>(()=>createDemoData());
   const [hydrated,setHydrated]=useState(false);
   const [selectedClient,setSelectedClient]=useState<Client|null>(null); const [selectedPolicy,setSelectedPolicy]=useState<Policy|null>(null); const [selectedProposal,setSelectedProposal]=useState<Proposal|null>(null); const [selectedOpportunity,setSelectedOpportunity]=useState<Opportunity|null>(null); const [selectedClaim,setSelectedClaim]=useState<Claim|null>(null);
   const [clientDialog,setClientDialog]=useState(false); const [opportunityDialog,setOpportunityDialog]=useState(false); const [proposalWizard,setProposalWizard]=useState(false); const [paymentDialog,setPaymentDialog]=useState(false);
+
+  useEffect(()=>{let actif=true;apiBackoffice.obtenirSession().then((reponse)=>{if(!actif)return;enregistrerSession(reponse);setUtilisateurConnecte(reponse.utilisateur);}).catch(()=>{if(actif){oublierSession();setUtilisateurConnecte(null);}});return()=>{actif=false};},[]);
 
   useEffect(()=>{const saved=localStorage.getItem(STORAGE_KEY);if(saved){try{setData(JSON.parse(saved));}catch{localStorage.removeItem(STORAGE_KEY)}}setHydrated(true);},[]);
   useEffect(()=>{if(hydrated)localStorage.setItem(STORAGE_KEY,JSON.stringify(data));},[data,hydrated]);
@@ -307,11 +414,16 @@ export function CourtierApp() {
   const updateClaim=(id:string,status:Claim["status"])=>{setData((prev)=>({...prev,claims:prev.claims.map((c)=>c.id===id?{...c,status,timeline:[...c.timeline,{date:"2026-10-01",label:`Statut modifié : ${status}`}]}:c)}));setSelectedClaim((c)=>c?.id===id?{...c,status,timeline:[...c.timeline,{date:"2026-10-01",label:`Statut modifié : ${status}`}]}:c);toast.success("Statut du sinistre mis à jour");};
   const resetData=()=>{const fresh=createDemoData();setData(fresh);localStorage.setItem(STORAGE_KEY,JSON.stringify(fresh));setActive("dashboard");toast.success("Données de démonstration réinitialisées");};
 
-  if(!connected)return <Login onConnect={()=>setConnected(true)}/>;
+  if(utilisateurConnecte===undefined)return <main className="auth-loading"><LoaderCircle className="animate-spin"/><span>Vérification de votre session…</span></main>;
+  if(!utilisateurConnecte)return <Login onConnect={setUtilisateurConnecte}/>;
+  const groupesNavigation=navGroups.filter((groupe)=>groupe.label!=="Administration"||utilisateurConnecte.role==="super_admin");
   let content:React.ReactNode;
   if(active==="dashboard")content=<DashboardView data={data} goTo={setActive}/>; else if(active==="clients")content=<ClientsView data={data} onSelect={setSelectedClient} onCreate={()=>setClientDialog(true)}/>; else if(active==="opportunities")content=<PipelineView data={data} onChangeStage={updateStage} onSelect={setSelectedOpportunity} onCreate={()=>setOpportunityDialog(true)}/>; else if(active==="proposals")content=<ProposalsView data={data} onSelect={setSelectedProposal} onCreate={()=>setProposalWizard(true)}/>; else if(active==="policies")content=<PoliciesView data={data} onSelect={setSelectedPolicy}/>; else if(["invoices","payments","commissions"].includes(active))content=<FinanceView kind={active as "invoices"|"payments"|"commissions"} data={data} onPayment={()=>setPaymentDialog(true)} onCreateInvoice={createInvoice}/>; else if(active==="renewals")content=<RenewalsView data={data} onPrepare={prepareRenewal}/>; else if(active==="claims")content=<ClaimsView data={data} onSelect={setSelectedClaim}/>; else if(active==="reports")content=<ReportsView data={data}/>; else content=<GenericView module={active} data={data}/>;
+  if(active==="users"&&utilisateurConnecte.role==="super_admin")content=<UsersView/>;
 
-  return <SidebarProvider><Sidebar collapsible="icon" className="border-r-0 bg-[#10294b] text-white"><SidebarHeader className="border-b border-white/10 px-4 py-5"><div className="flex items-center gap-3 overflow-hidden"><div className="brand-mark brand-mark--sidebar">GC</div><div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-semibold">Gestion du courtage</p><p className="truncate text-xs text-blue-200">Espace interne</p></div></div></SidebarHeader><SidebarContent className="px-2 py-3">{navGroups.map((group)=><SidebarGroup key={group.label||"main"} className="py-1"><SidebarGroupLabel className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-blue-300">{group.label}</SidebarGroupLabel><SidebarGroupContent><SidebarMenu>{group.items.map((item)=><NavItem key={item.id} item={item} current={active} onSelect={setActive}/>)}</SidebarMenu></SidebarGroupContent></SidebarGroup>)}</SidebarContent><SidebarFooter className="border-t border-white/10 p-3"><div className="flex items-center gap-3 rounded-xl bg-white/8 p-2"><div className="avatar">SN</div><div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-medium">Sophie N.</p><p className="truncate text-xs text-blue-200">Responsable courtage</p></div></div></SidebarFooter></Sidebar><SidebarInset className="min-w-0 bg-[#f4f7fb]"><header className="app-topbar"><div className="flex min-w-0 items-center gap-3"><SidebarTrigger aria-label="Ouvrir le menu"/><div className="mobile-title">{moduleLabels[active]}</div><div className="topbar-search"><Search/><input aria-label="Recherche globale" placeholder="Rechercher un client, une police…"/></div></div><div className="flex items-center gap-2"><Button size="icon" variant="ghost" aria-label="Notifications"><Bell/></Button><Button onClick={()=>{setActive("opportunities");setOpportunityDialog(true)}}><Plus/>Nouvelle affaire</Button><AlertDialog><AlertDialogTrigger asChild><Button size="icon" variant="ghost" aria-label="Réinitialiser les données"><RefreshCcw/></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Réinitialiser la démonstration ?</AlertDialogTitle><AlertDialogDescription>Toutes les modifications locales seront remplacées par les données fictives initiales.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction onClick={resetData}>Réinitialiser</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></div></header><main className="dashboard-wrap app-content">{content}</main></SidebarInset>
+  const deconnecter=async()=>{try{await apiBackoffice.deconnecter();}catch{}finally{oublierSession();setUtilisateurConnecte(null);setActive("dashboard");}};
+
+  return <SidebarProvider><Sidebar collapsible="icon" className="border-r-0 bg-[#10294b] text-white"><SidebarHeader className="border-b border-white/10 px-4 py-5"><div className="flex items-center gap-3 overflow-hidden"><div className="brand-mark brand-mark--sidebar">GC</div><div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-semibold">Gestion du courtage</p><p className="truncate text-xs text-blue-200">Espace interne</p></div></div></SidebarHeader><SidebarContent className="px-2 py-3">{groupesNavigation.map((group)=><SidebarGroup key={group.label||"main"} className="py-1"><SidebarGroupLabel className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-blue-300">{group.label}</SidebarGroupLabel><SidebarGroupContent><SidebarMenu>{group.items.map((item)=><NavItem key={item.id} item={item} current={active} onSelect={setActive}/>)}</SidebarMenu></SidebarGroupContent></SidebarGroup>)}</SidebarContent><SidebarFooter className="border-t border-white/10 p-3"><div className="flex items-center gap-3 rounded-xl bg-white/8 p-2"><div className="avatar">{utilisateurConnecte.nom_complet.split(" ").map((partie)=>partie[0]).join("").slice(0,2)}</div><div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-medium">{utilisateurConnecte.nom_complet}</p><p className="truncate text-xs text-blue-200">{libellesRoles[utilisateurConnecte.role]}</p></div></div></SidebarFooter></Sidebar><SidebarInset className="min-w-0 bg-[#f4f7fb]"><header className="app-topbar"><div className="flex min-w-0 items-center gap-3"><SidebarTrigger aria-label="Ouvrir le menu"/><div className="mobile-title">{moduleLabels[active]}</div><div className="topbar-search"><Search/><input aria-label="Recherche globale" placeholder="Rechercher un client, une police…"/></div></div><div className="flex items-center gap-2"><Button size="icon" variant="ghost" aria-label="Notifications"><Bell/></Button><Button onClick={()=>{setActive("opportunities");setOpportunityDialog(true)}}><Plus/>Nouvelle affaire</Button><AlertDialog><AlertDialogTrigger asChild><Button size="icon" variant="ghost" aria-label="Réinitialiser les données"><RefreshCcw/></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Réinitialiser la démonstration ?</AlertDialogTitle><AlertDialogDescription>Toutes les modifications locales seront remplacées par les données fictives initiales.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction onClick={resetData}>Réinitialiser</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog><Button size="icon" variant="ghost" aria-label="Se déconnecter" onClick={()=>void deconnecter()}><LogOut/></Button></div></header><main className="dashboard-wrap app-content">{content}</main></SidebarInset>
     <ClientSheet client={selectedClient} data={data} onClose={()=>setSelectedClient(null)}/><PolicySheet policy={selectedPolicy} data={data} onClose={()=>setSelectedPolicy(null)}/><ProposalDialog proposal={selectedProposal} data={data} onClose={()=>setSelectedProposal(null)} onRecommend={recommendOffer} onAddOffer={addOffer} onConvert={convertProposal}/><OpportunityDialog opportunity={selectedOpportunity} data={data} onClose={()=>setSelectedOpportunity(null)} onStage={(stage)=>selectedOpportunity&&updateStage(selectedOpportunity.id,stage)}/><ClaimDialog claim={selectedClaim} data={data} onClose={()=>setSelectedClaim(null)} onStatus={(status)=>selectedClaim&&updateClaim(selectedClaim.id,status)}/><CreateClientDialog open={clientDialog} onClose={()=>setClientDialog(false)} onCreate={createClient}/><CreateOpportunityDialog open={opportunityDialog} data={data} onClose={()=>setOpportunityDialog(false)} onCreate={createOpportunity}/><ProposalWizard open={proposalWizard} data={data} onClose={()=>setProposalWizard(false)} onCreate={createProposal}/><PaymentDialog open={paymentDialog} data={data} onClose={()=>setPaymentDialog(false)} onCreate={createPayment}/><Toaster richColors position="bottom-right"/>
   </SidebarProvider>;
 }
