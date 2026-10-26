@@ -206,13 +206,6 @@ export const apiBackoffice = {
     );
   },
 
-  modifierStatutDemande(reference: string, statut: StatutDemande) {
-    return appeler<DetailDemandeClient>(
-      `/backoffice/demandes-clients/${encodeURIComponent(reference)}/statut`,
-      { method: "PATCH", body: JSON.stringify({ statut }) },
-    );
-  },
-
   prendreEnChargeDemande(reference: string) {
     return appeler<DetailDemandeClient>(
       `/backoffice/demandes-clients/${encodeURIComponent(reference)}/prise-en-charge`,
