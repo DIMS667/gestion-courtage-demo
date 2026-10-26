@@ -77,9 +77,9 @@ const displayDate = (value: string) => new Intl.DateTimeFormat("fr-FR", { day: "
 
 const lireReferenceDemandeUrl = () => {
   if (typeof window === "undefined") return null;
-  const correspondance = window.location.pathname.match(/^\/demandes\/([^/]+)\/?$/);
-  return correspondance ? decodeURIComponent(correspondance[1]) : null;
+  return new URLSearchParams(window.location.search).get("demande");
 };
+const estVueDemandesUrl = () => typeof window !== "undefined" && (Boolean(lireReferenceDemandeUrl()) || new URLSearchParams(window.location.search).get("vue") === "demandes");
 
 type ModuleId = "dashboard" | "requests" | "clients" | "opportunities" | "activities" | "proposals" | "policies" | "transactions" | "products" | "companies" | "transmissions" | "invoices" | "payments" | "commissions" | "documents" | "renewals" | "claims" | "reports" | "users" | "roles" | "settings";
 
@@ -486,7 +486,7 @@ function PaymentDialog({ open, data, onClose, onCreate }: { open:boolean; data:D
 
 export function CourtierApp() {
   const [utilisateurConnecte,setUtilisateurConnecte]=useState<UtilisateurBackoffice|null|undefined>(undefined);
-  const [active,setActive]=useState<ModuleId>(()=>typeof window!=="undefined"&&window.location.pathname.startsWith("/demandes")?"requests":"dashboard");
+  const [active,setActive]=useState<ModuleId>(()=>estVueDemandesUrl()?"requests":"dashboard");
   const [referenceDemandeOuverte,setReferenceDemandeOuverte]=useState<string|null>(lireReferenceDemandeUrl);
   const [versionDemandes,setVersionDemandes]=useState(0);
   const [nouvellesDemandes,setNouvellesDemandes]=useState(0);
@@ -495,11 +495,11 @@ export function CourtierApp() {
   const [selectedClient,setSelectedClient]=useState<Client|null>(null); const [selectedPolicy,setSelectedPolicy]=useState<Policy|null>(null); const [selectedProposal,setSelectedProposal]=useState<Proposal|null>(null); const [selectedOpportunity,setSelectedOpportunity]=useState<Opportunity|null>(null); const [selectedClaim,setSelectedClaim]=useState<Claim|null>(null);
   const [clientDialog,setClientDialog]=useState(false); const [opportunityDialog,setOpportunityDialog]=useState(false); const [proposalWizard,setProposalWizard]=useState(false); const [paymentDialog,setPaymentDialog]=useState(false);
 
-  useEffect(()=>{const synchroniser=()=>{const chemin=window.location.pathname;setReferenceDemandeOuverte(lireReferenceDemandeUrl());if(chemin.startsWith("/demandes"))setActive("requests");};window.addEventListener("popstate",synchroniser);return()=>window.removeEventListener("popstate",synchroniser);},[]);
+  useEffect(()=>{const synchroniser=()=>{setReferenceDemandeOuverte(lireReferenceDemandeUrl());if(estVueDemandesUrl())setActive("requests");};window.addEventListener("popstate",synchroniser);return()=>window.removeEventListener("popstate",synchroniser);},[]);
 
-  const ouvrirListeDemandes=()=>{window.history.pushState({},"","/demandes");setReferenceDemandeOuverte(null);setActive("requests");setNouvellesDemandes(0);};
-  const revenirListeDemandes=()=>{window.history.replaceState({},"","/demandes");setReferenceDemandeOuverte(null);setActive("requests");setNouvellesDemandes(0);window.scrollTo({top:0,behavior:"smooth"});};
-  const ouvrirDemande=(reference:string)=>{window.history.pushState({},"",`/demandes/${encodeURIComponent(reference)}`);setReferenceDemandeOuverte(reference);setActive("requests");setNouvellesDemandes(0);window.scrollTo({top:0,behavior:"smooth"});};
+  const ouvrirListeDemandes=()=>{window.history.pushState({},"","/?vue=demandes");setReferenceDemandeOuverte(null);setActive("requests");setNouvellesDemandes(0);};
+  const revenirListeDemandes=()=>{window.history.replaceState({},"","/?vue=demandes");setReferenceDemandeOuverte(null);setActive("requests");setNouvellesDemandes(0);window.scrollTo({top:0,behavior:"smooth"});};
+  const ouvrirDemande=(reference:string)=>{window.history.pushState({},"",`/?demande=${encodeURIComponent(reference)}`);setReferenceDemandeOuverte(reference);setActive("requests");setNouvellesDemandes(0);window.scrollTo({top:0,behavior:"smooth"});};
 
   useEffect(()=>{let actif=true;apiBackoffice.obtenirSession().then((reponse)=>{if(!actif)return;enregistrerSession(reponse);setUtilisateurConnecte(reponse.utilisateur);}).catch(()=>{if(actif){oublierSession();setUtilisateurConnecte(null);}});return()=>{actif=false};},[]);
 
@@ -534,7 +534,7 @@ export function CourtierApp() {
   if(utilisateurConnecte===undefined)return <main className="auth-loading"><LoaderCircle className="animate-spin"/><span>Vérification de votre session…</span></main>;
   if(!utilisateurConnecte)return <Login onConnect={setUtilisateurConnecte}/>;
   const groupesNavigation=navGroups.filter((groupe)=>groupe.label!=="Administration"||utilisateurConnecte.role==="super_admin");
-  const selectionnerModule=(module:ModuleId)=>{if(module==="requests"){ouvrirListeDemandes();return;}if(window.location.pathname.startsWith("/demandes"))window.history.pushState({},"","/");setReferenceDemandeOuverte(null);setActive(module);};
+  const selectionnerModule=(module:ModuleId)=>{if(module==="requests"){ouvrirListeDemandes();return;}if(estVueDemandesUrl())window.history.pushState({},"","/");setReferenceDemandeOuverte(null);setActive(module);};
   let content:React.ReactNode;
   if(active==="dashboard")content=<DashboardView data={data} goTo={selectionnerModule}/>; else if(active==="requests"&&referenceDemandeOuverte)content=<RequestDetailView reference={referenceDemandeOuverte} version={versionDemandes} utilisateur={utilisateurConnecte} onBack={revenirListeDemandes}/>; else if(active==="requests")content=<RequestsView version={versionDemandes} utilisateur={utilisateurConnecte} onOpen={ouvrirDemande}/>; else if(active==="clients")content=<ClientsView data={data} onSelect={setSelectedClient} onCreate={()=>setClientDialog(true)}/>; else if(active==="opportunities")content=<PipelineView data={data} onChangeStage={updateStage} onSelect={setSelectedOpportunity} onCreate={()=>setOpportunityDialog(true)}/>; else if(active==="proposals")content=<ProposalsView data={data} onSelect={setSelectedProposal} onCreate={()=>setProposalWizard(true)}/>; else if(active==="policies")content=<PoliciesView data={data} onSelect={setSelectedPolicy}/>; else if(["invoices","payments","commissions"].includes(active))content=<FinanceView kind={active as "invoices"|"payments"|"commissions"} data={data} onPayment={()=>setPaymentDialog(true)} onCreateInvoice={createInvoice}/>; else if(active==="renewals")content=<RenewalsView data={data} onPrepare={prepareRenewal}/>; else if(active==="claims")content=<ClaimsView data={data} onSelect={setSelectedClaim}/>; else if(active==="reports")content=<ReportsView data={data}/>; else content=<GenericView module={active} data={data}/>;
   if(active==="users"&&utilisateurConnecte.role==="super_admin")content=<UsersView utilisateurCourantId={utilisateurConnecte.id}/>;
