@@ -12,6 +12,38 @@ export type UtilisateurBackoffice = {
   doit_changer_mot_de_passe: boolean;
 };
 
+export type StatutDemande =
+  | "nouvelle"
+  | "en_analyse"
+  | "propositions_disponibles"
+  | "offre_selectionnee"
+  | "documents_requis"
+  | "paiement_en_attente"
+  | "contrat_en_preparation"
+  | "police_disponible"
+  | "finalisee";
+
+export type ResumeDemandeClient = {
+  id: string;
+  reference: string;
+  produit: "automobile";
+  sous_type: "voiture" | "moto_deux_trois_roues";
+  mode_preparation: "saisie_directe" | "delegation_courtier";
+  statut: StatutDemande;
+  client: {
+    id: string;
+    nom_complet: string;
+    adresse_email: string;
+    numero_telephone: string;
+  };
+  cree_le: string;
+  modifie_le: string;
+};
+
+export type DetailDemandeClient = ResumeDemandeClient & {
+  donnees: Record<string, unknown>;
+};
+
 export type ReponseAuthentification =
   | { statut: "connecte"; utilisateur: UtilisateurBackoffice; jeton_csrf: string }
   | { statut: "mot_de_passe_a_changer"; defi: string }
@@ -150,5 +182,32 @@ export const apiBackoffice = {
       `/backoffice/utilisateurs/${id}/mot-de-passe-temporaire`,
       { method: "POST", body: JSON.stringify({ mot_de_passe_temporaire }) },
     );
+  },
+
+  listerDemandes(parametres?: { statut?: StatutDemande; recherche?: string }) {
+    const recherche = new URLSearchParams();
+    if (parametres?.statut) recherche.set("statut_demande", parametres.statut);
+    if (parametres?.recherche) recherche.set("recherche", parametres.recherche);
+    const suffixe = recherche.size ? `?${recherche.toString()}` : "";
+    return appeler<ResumeDemandeClient[]>(`/backoffice/demandes-clients${suffixe}`);
+  },
+
+  obtenirDemande(reference: string) {
+    return appeler<DetailDemandeClient>(
+      `/backoffice/demandes-clients/${encodeURIComponent(reference)}`,
+    );
+  },
+
+  modifierStatutDemande(reference: string, statut: StatutDemande) {
+    return appeler<DetailDemandeClient>(
+      `/backoffice/demandes-clients/${encodeURIComponent(reference)}/statut`,
+      { method: "PATCH", body: JSON.stringify({ statut }) },
+    );
+  },
+
+  creerFluxDemandes() {
+    return new EventSource(`${URL_API}/backoffice/demandes-clients/flux`, {
+      withCredentials: true,
+    });
   },
 };
