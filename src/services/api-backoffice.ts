@@ -23,6 +23,12 @@ export type StatutDemande =
   | "police_disponible"
   | "finalisee";
 
+export type IntervenantDemande = {
+  id: string;
+  nom_complet: string;
+  role: RoleBackoffice;
+};
+
 export type ResumeDemandeClient = {
   id: string;
   reference: string;
@@ -30,6 +36,8 @@ export type ResumeDemandeClient = {
   sous_type: "voiture" | "moto_deux_trois_roues";
   mode_preparation: "saisie_directe" | "delegation_courtier";
   statut: StatutDemande;
+  responsable: IntervenantDemande | null;
+  prise_en_charge_le: string | null;
   client: {
     id: string;
     nom_complet: string;
@@ -202,6 +210,31 @@ export const apiBackoffice = {
     return appeler<DetailDemandeClient>(
       `/backoffice/demandes-clients/${encodeURIComponent(reference)}/statut`,
       { method: "PATCH", body: JSON.stringify({ statut }) },
+    );
+  },
+
+  prendreEnChargeDemande(reference: string) {
+    return appeler<DetailDemandeClient>(
+      `/backoffice/demandes-clients/${encodeURIComponent(reference)}/prise-en-charge`,
+      { method: "POST" },
+    );
+  },
+
+  libererDemande(reference: string) {
+    return appeler<DetailDemandeClient>(
+      `/backoffice/demandes-clients/${encodeURIComponent(reference)}/liberation`,
+      { method: "POST" },
+    );
+  },
+
+  listerIntervenantsDemandes() {
+    return appeler<IntervenantDemande[]>("/backoffice/demandes-clients/intervenants");
+  },
+
+  reaffecterDemande(reference: string, responsable_id: string, motif: string) {
+    return appeler<DetailDemandeClient>(
+      `/backoffice/demandes-clients/${encodeURIComponent(reference)}/reaffectation`,
+      { method: "POST", body: JSON.stringify({ responsable_id, motif }) },
     );
   },
 
