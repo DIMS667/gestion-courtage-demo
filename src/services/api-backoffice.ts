@@ -93,6 +93,15 @@ export type LienConsultationDocument = {
   expire_dans_secondes: number;
 };
 
+export type DecisionDocument = "valider" | "demander_correction";
+export type MotifCorrectionDocument =
+  | "illisible"
+  | "mauvais_document"
+  | "incomplet"
+  | "expire"
+  | "informations_non_concordantes"
+  | "autre";
+
 export type ReponseAuthentification =
   | { statut: "connecte"; utilisateur: UtilisateurBackoffice; jeton_csrf: string }
   | { statut: "mot_de_passe_a_changer"; defi: string }
@@ -250,6 +259,21 @@ export const apiBackoffice = {
   obtenirLienConsultationDocument(documentId: string) {
     return appeler<LienConsultationDocument>(
       `/backoffice/documents/${encodeURIComponent(documentId)}/consultation`,
+    );
+  },
+
+  deciderDocument(
+    documentId: string,
+    entree: {
+      demande_reference: string;
+      decision: DecisionDocument;
+      motif?: MotifCorrectionDocument;
+      commentaire?: string;
+    },
+  ) {
+    return appeler<Record<string, unknown>>(
+      `/backoffice/documents/${encodeURIComponent(documentId)}/decision`,
+      { method: "POST", body: JSON.stringify(entree) },
     );
   },
 

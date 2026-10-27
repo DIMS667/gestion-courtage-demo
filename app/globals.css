@@ -334,8 +334,12 @@ button, input { font: inherit; }
 .request-document-identity { display: grid; min-width: 0; gap: .1rem; }
 .request-document-identity strong { overflow: hidden; color: #263e55; font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
 .request-document-identity span { overflow: hidden; color: #748496; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+.request-document-identity small { margin-top: .18rem; color: #b4232e; font-size: .66rem; line-height: 1.35; }
 .request-document-meta { display: flex; align-items: center; gap: .5rem; }
 .request-document-meta small { color: #7b8997; font-size: .66rem; white-space: nowrap; }
+.request-document-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .35rem; }
+.request-document-actions button { height: 2rem; padding-inline: .58rem; font-size: .68rem; }
+.request-document-decision-form { display: grid; gap: .6rem; padding-block: .35rem; }
 .document-viewer-dialog { width: min(94vw, 70rem) !important; max-width: 70rem !important; }
 .document-viewer-frame { width: 100%; height: min(72vh, 48rem); border: 1px solid #dfe7ee; border-radius: .75rem; background: #f6f8fa; }
 .document-viewer-skeleton { display: grid; height: min(72vh, 48rem); align-content: start; gap: 1rem; padding: 2rem; border-radius: .75rem; background: #f5f7f9; }
@@ -343,7 +347,7 @@ button, input { font: inherit; }
 .document-viewer-skeleton span:nth-child(2) { width: 72%; }
 .document-viewer-skeleton span:nth-child(3) { width: 48%; }
 @keyframes skeleton-slide { to { background-position: -200% 0; } }
-@media (max-width: 700px) { .request-document-row { grid-template-columns: auto minmax(0, 1fr) auto; } .request-document-meta { display: none; } }
+@media (max-width: 700px) { .request-document-row { grid-template-columns: auto minmax(0, 1fr); } .request-document-meta { display: none; } .request-document-actions { grid-column: 1 / -1; justify-content: flex-start; padding-left: 2.7rem; } }
 .request-fields { display: grid; gap: .65rem; }
 .request-fields--root { gap: 1rem; }
 .request-field { min-width: 0; display: grid; gap: .3rem; border: 1px solid #e2e9f0; border-radius: .7rem; background: #f8fafc; padding: .7rem .8rem; }

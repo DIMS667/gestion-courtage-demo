@@ -70,7 +70,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
 import { Claim, Client, createDemoData, DemoData, Offer, Opportunity, Policy, Proposal, companies, products, users } from "@/src/demo-data";
-import { apiBackoffice, DetailDemandeClient, DetailSinistre, enregistrerSession, IntervenantDemande, oublierSession, ReponseAuthentification, ResumeDemandeClient, ResumeSinistre, RoleBackoffice, StatutBackoffice, StatutDemande, StatutSinistre, UtilisateurBackoffice } from "@/src/services/api-backoffice";
+import { apiBackoffice, DetailDemandeClient, DetailSinistre, enregistrerSession, IntervenantDemande, MotifCorrectionDocument, oublierSession, ReponseAuthentification, ResumeDemandeClient, ResumeSinistre, RoleBackoffice, StatutBackoffice, StatutDemande, StatutSinistre, UtilisateurBackoffice } from "@/src/services/api-backoffice";
 
 const STORAGE_KEY = "gestion-courtage-demo-v1";
 const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XAF", maximumFractionDigits: 0 });
@@ -280,7 +280,7 @@ const chaineStatutsSinistres:Array<{statut:StatutSinistre;libelle:string;descrip
 ];
 const libellesStatutsSinistres=Object.fromEntries(chaineStatutsSinistres.map((etape)=>[etape.statut,etape.libelle])) as Record<StatutSinistre,string>;
 const libellesChamps:Record<string,string>={prenom:"Prénom",prenoms:"Prénoms",nom:"Nom",telephone:"Téléphone",adresse_email:"Adresse e-mail",adresse:"Adresse",ville:"Ville",est_souscripteur:"Même personne que le souscripteur",date_naissance:"Date de naissance",profession:"Profession",numero_permis:"Numéro de permis",categorie_permis:"Catégorie du permis",permis_delivre_le:"Permis délivré le",permis_valide_jusqu_au:"Permis valide jusqu’au",marque:"Marque",modele:"Modèle",annee:"Année",immatriculation:"Immatriculation",nombre_places:"Nombre de places",numero_chassis:"Numéro de châssis",energie:"Énergie",puissance_fiscale:"Puissance fiscale",cylindree_cm3:"Cylindrée",usage:"Usage",valeur_estimee:"Valeur estimée",transporte_matieres_inflammables:"Transport de matières inflammables",possede_remorque:"Remorque",duree_mois:"Durée de couverture",date_effet_souhaitee:"Date d’effet souhaitée",date_effet_inconnue:"Date d’effet inconnue",garanties:"Garanties",type_besoin:"Nature du besoin",precision_autre_besoin:"Précision",message_delegation:"Message confié au courtier",possede_vignette:"Vignette en cours de validité"};
-const libellesValeurs:Record<string,string>={nouveau_vehicule:"Nouveau véhicule",renouvellement:"Renouvellement",autre:"Autre besoin",essence:"Essence",diesel:"Diesel",electrique:"Électrique",cat1_professionnel:"CAT1 · Usage professionnel",cat2_transport_produits:"CAT2 · Transport de produits",cat3_transport_marchandises_tiers:"CAT3 · Transport de marchandises appartenant à des tiers",cat5:"CAT5 · Véhicule motorisé à deux ou trois roues",cat5_bis:"CAT5 BIS · Transport payant de passagers",responsabilite_civile:"Responsabilité civile",defense_et_recours:"Défense et recours",ipt:"IPT",bris_glaces_tous_risques:"Bris de glaces en tous risques",bris_glaces_hors_tous_risques:"Bris de glaces hors tous risques",bris_glaces_blocs_feux:"Bris de glaces et blocs-feux",tierce_collision:"Tierce collision",dommages_tous_accidents:"Dommages tous accidents",incendie:"Incendie",incendie_risques_electriques:"Incendie et risques électriques",vol_braquage:"Vol et braquage",vol_total:"Vol total",vol_total_partiel:"Vol total ou partiel",assistance_reparation:"Assistance à réparation",avance_sur_recours:"Avance sur recours"};
+const libellesValeurs:Record<string,string>={nouveau_vehicule:"Nouveau véhicule",renouvellement:"Renouvellement",autre:"Autre besoin",essence:"Essence",diesel:"Diesel",electrique:"Électrique",recu:"Reçu",en_verification:"En vérification",valide:"Validé",correction_requise:"À remplacer",cat1_professionnel:"CAT1 · Usage professionnel",cat2_transport_produits:"CAT2 · Transport de produits",cat3_transport_marchandises_tiers:"CAT3 · Transport de marchandises appartenant à des tiers",cat5:"CAT5 · Véhicule motorisé à deux ou trois roues",cat5_bis:"CAT5 BIS · Transport payant de passagers",responsabilite_civile:"Responsabilité civile",defense_et_recours:"Défense et recours",ipt:"IPT",bris_glaces_tous_risques:"Bris de glaces en tous risques",bris_glaces_hors_tous_risques:"Bris de glaces hors tous risques",bris_glaces_blocs_feux:"Bris de glaces et blocs-feux",tierce_collision:"Tierce collision",dommages_tous_accidents:"Dommages tous accidents",incendie:"Incendie",incendie_risques_electriques:"Incendie et risques électriques",vol_braquage:"Vol et braquage",vol_total:"Vol total",vol_total_partiel:"Vol total ou partiel",assistance_reparation:"Assistance à réparation",avance_sur_recours:"Avance sur recours"};
 const libelleChamp=(champ:string)=>libellesChamps[champ]??champ.replaceAll("_"," ").replace(/^./,(lettre)=>lettre.toUpperCase());
 const objetDemande=(valeur:unknown):Record<string,unknown>=>typeof valeur==="object"&&valeur!==null&&!Array.isArray(valeur)?valeur as Record<string,unknown>:{};
 
@@ -306,8 +306,20 @@ type DocumentDemandeClient = {
   type:string;
   dossier:string;
   statut:string;
+  motif_correction?:string;
+  commentaire_correction?:string;
+  version?:number;
   date?:string;
 };
+
+const motifsCorrectionDocuments:{value:MotifCorrectionDocument;label:string}[]=[
+  {value:"illisible",label:"Document illisible"},
+  {value:"mauvais_document",label:"Mauvais document"},
+  {value:"incomplet",label:"Document incomplet"},
+  {value:"expire",label:"Document expiré"},
+  {value:"informations_non_concordantes",label:"Informations non concordantes"},
+  {value:"autre",label:"Autre motif"},
+];
 
 function normaliserDocumentDemande(valeur:unknown):DocumentDemandeClient|null {
   if(!valeur||typeof valeur!=="object"||Array.isArray(valeur))return null;
@@ -320,13 +332,20 @@ function normaliserDocumentDemande(valeur:unknown):DocumentDemandeClient|null {
     type:typeof document.type==="string"?document.type:"Document",
     dossier:typeof document.dossier==="string"?document.dossier:"",
     statut:typeof document.statut==="string"?document.statut:"recu",
+    motif_correction:typeof document.motif_correction==="string"?document.motif_correction:undefined,
+    commentaire_correction:typeof document.commentaire_correction==="string"?document.commentaire_correction:undefined,
+    version:typeof document.version==="number"?document.version:undefined,
     date:typeof document.date==="string"?document.date:undefined,
   };
 }
 
-function ListeDocumentsClient({ documents }: { documents:unknown[] }) {
+function ListeDocumentsClient({ documents, demandeReference, peutDecider, onActualiser }: { documents:unknown[]; demandeReference:string; peutDecider:boolean; onActualiser:()=>Promise<void> }) {
   const liste=documents.map(normaliserDocumentDemande).filter((document):document is DocumentDemandeClient=>document!==null&&Boolean(document.nom_fichier));
   const [documentActif,setDocumentActif]=useState<DocumentDemandeClient|null>(null);
+  const [documentACorriger,setDocumentACorriger]=useState<DocumentDemandeClient|null>(null);
+  const [motifCorrection,setMotifCorrection]=useState<MotifCorrectionDocument|"">("");
+  const [commentaireCorrection,setCommentaireCorrection]=useState("");
+  const [decisionEnCours,setDecisionEnCours]=useState<string|null>(null);
   const [url,setUrl]=useState("");
   const [chargement,setChargement]=useState(false);
 
@@ -345,11 +364,25 @@ function ListeDocumentsClient({ documents }: { documents:unknown[] }) {
     }
   };
 
+  const decider=async(document:DocumentDemandeClient,decision:"valider"|"demander_correction")=>{
+    setDecisionEnCours(`${document.id}:${decision}`);
+    try{
+      await apiBackoffice.deciderDocument(document.id,{demande_reference:demandeReference,decision,...(decision==="demander_correction"&&motifCorrection?{motif:motifCorrection,commentaire:commentaireCorrection.trim()||undefined}:{})});
+      await onActualiser();
+      toast.success(decision==="valider"?"Le document a été validé.":"Le client a été invité à remplacer le document.");
+      setDocumentACorriger(null);setMotifCorrection("");setCommentaireCorrection("");
+    }catch(cause){toast.error(cause instanceof Error?cause.message:"La décision n’a pas pu être enregistrée.");}
+    finally{setDecisionEnCours(null);}
+  };
+
   if(liste.length===0)return <div className="request-documents-empty"><Files/><div><strong>Aucun document transmis</strong><span>Les documents déposés depuis le portail client apparaîtront ici dans son dossier.</span></div></div>;
   return <>
-    <div className="request-document-table">{liste.map((document)=><div className="request-document-row" key={document.id}><span className="request-document-icon"><FileText/></span><div className="request-document-identity"><strong>{document.titre}</strong><span>{document.nom_fichier}</span></div><div className="request-document-meta"><Badge variant="secondary">{libellesValeurs[document.statut]??libelleChamp(document.statut)}</Badge>{document.date&&<small>{displayDate(document.date)}</small>}</div><Button variant="outline" size="sm" onClick={()=>void consulter(document)}><Eye/>Voir</Button></div>)}</div>
+    <div className="request-document-table">{liste.map((document)=><div className="request-document-row" key={document.id}><span className="request-document-icon"><FileText/></span><div className="request-document-identity"><strong>{document.titre}</strong><span>{document.nom_fichier}{document.version&&document.version>1?` · version ${document.version}`:""}</span>{document.statut==="correction_requise"&&<small>{document.commentaire_correction||motifsCorrectionDocuments.find((motif)=>motif.value===document.motif_correction)?.label}</small>}</div><div className="request-document-meta"><Badge variant="secondary">{libellesValeurs[document.statut]??libelleChamp(document.statut)}</Badge>{document.date&&<small>{displayDate(document.date)}</small>}</div><div className="request-document-actions"><Button variant="outline" size="sm" onClick={()=>void consulter(document)}><Eye/>Voir</Button>{peutDecider&&document.statut!=="valide"&&<Button size="sm" disabled={Boolean(decisionEnCours)} onClick={()=>void decider(document,"valider")}><Check/>Valider</Button>}{peutDecider&&<Button variant="outline" size="sm" disabled={Boolean(decisionEnCours)} onClick={()=>{setDocumentACorriger(document);setMotifCorrection("");setCommentaireCorrection("");}}><RefreshCcw/>À remplacer</Button>}</div></div>)}</div>
     <Dialog open={Boolean(documentActif)} onOpenChange={(ouvert)=>{if(!ouvert){setDocumentActif(null);setUrl("");}}}>
       <DialogContent className="document-viewer-dialog"><DialogHeader><DialogTitle>{documentActif?.titre}</DialogTitle><DialogDescription>{documentActif?.nom_fichier} · lien sécurisé temporaire</DialogDescription></DialogHeader>{chargement?<div className="document-viewer-skeleton" aria-label="Chargement du document"><span/><span/><span/></div>:url?<iframe className="document-viewer-frame" src={url} title={documentActif?.titre}/>:null}{url&&<DialogFooter><Button variant="outline" onClick={()=>window.open(url,"_blank","noopener,noreferrer")}>Ouvrir dans un nouvel onglet</Button></DialogFooter>}</DialogContent>
+    </Dialog>
+    <Dialog open={Boolean(documentACorriger)} onOpenChange={(ouvert)=>{if(!ouvert){setDocumentACorriger(null);setMotifCorrection("");setCommentaireCorrection("");}}}>
+      <DialogContent><DialogHeader><DialogTitle>Demander le remplacement du document</DialogTitle><DialogDescription>{documentACorriger?.titre} · le motif sera visible par le client.</DialogDescription></DialogHeader><div className="request-document-decision-form"><Label>Motif *</Label><Select value={motifCorrection} onValueChange={(valeur)=>setMotifCorrection(valeur as MotifCorrectionDocument)}><SelectTrigger className="w-full"><SelectValue placeholder="Choisir un motif"/></SelectTrigger><SelectContent>{motifsCorrectionDocuments.map((motif)=><SelectItem key={motif.value} value={motif.value}>{motif.label}</SelectItem>)}</SelectContent></Select><Label>Précision pour le client</Label><Textarea value={commentaireCorrection} onChange={(event)=>setCommentaireCorrection(event.target.value)} maxLength={1000} placeholder="Expliquez clairement ce qui doit être corrigé."/></div><DialogFooter><Button variant="outline" onClick={()=>setDocumentACorriger(null)}>Annuler</Button><Button disabled={!documentACorriger||!motifCorrection||(motifCorrection==="autre"&&commentaireCorrection.trim().length<3)||Boolean(decisionEnCours)} onClick={()=>documentACorriger&&void decider(documentACorriger,"demander_correction")}>{decisionEnCours&&<LoaderCircle className="animate-spin"/>}Demander le remplacement</Button></DialogFooter></DialogContent>
     </Dialog>
   </>;
 }
@@ -364,7 +397,7 @@ function ParcoursSinistre({ statut }: { statut:StatutSinistre }) {
   return <div className="request-progress">{chaineStatutsSinistres.map((etape,index)=><div key={etape.statut} className={`${index<indexActuel?"is-done ":""}${index===indexActuel?"is-current":""}`}><span>{index<indexActuel?<Check/>:index+1}</span><div><strong>{etape.libelle}</strong><small>{etape.description}</small></div></div>)}</div>;
 }
 
-function FicheDemandeClient({ demande }: { demande:DetailDemandeClient }) {
+function FicheDemandeClient({ demande, peutDeciderDocuments, onActualiser }: { demande:DetailDemandeClient; peutDeciderDocuments:boolean; onActualiser:()=>Promise<void> }) {
   const donnees=demande.donnees;
   const conducteur=objetDemande(donnees.conducteur);
   const vehicule=objetDemande(donnees.vehicule);
@@ -373,7 +406,7 @@ function FicheDemandeClient({ demande }: { demande:DetailDemandeClient }) {
   const besoin={type_besoin:donnees.type_besoin,precision_autre_besoin:donnees.precision_autre_besoin,message_delegation:donnees.message_delegation,possede_vignette:donnees.possede_vignette};
   const champsDejaAffiches=new Set(["souscripteur","assure","conducteur","vehicule","couverture","documents","pieces_jointes","type_besoin","precision_autre_besoin","message_delegation","possede_vignette"]);
   const informationsComplementaires=Object.fromEntries(Object.entries(donnees).filter(([champ])=>!champsDejaAffiches.has(champ)));
-  return <div className="request-dossier-content"><section className="request-client-card"><div className="request-client-avatar">{demande.client.nom_complet.split(" ").slice(0,2).map((partie)=>partie[0]).join("")}</div><div><p className="eyebrow">Client</p><h3>{demande.client.nom_complet}</h3><span>{demande.client.adresse_email} · {demande.client.numero_telephone}</span></div></section><section><p className="eyebrow">Informations du client</p><div className="request-info-stack"><GroupeInformations titre="Souscripteur" donnees={objetDemande(donnees.souscripteur)}/><GroupeInformations titre="Assuré" donnees={objetDemande(donnees.assure)}/><GroupeInformations titre="Conducteur" donnees={conducteur}/><article className="request-info-group"><h4>Documents du client</h4><ListeDocumentsClient documents={documents}/></article></div></section><section><p className="eyebrow">Informations de la demande</p><div className="request-info-stack"><GroupeInformations titre="Besoin exprimé" donnees={besoin}/><GroupeInformations titre="Véhicule" donnees={vehicule}/><GroupeInformations titre="Couverture et garanties" donnees={couverture}/><GroupeInformations titre="Informations complémentaires" donnees={informationsComplementaires}/></div></section></div>;
+  return <div className="request-dossier-content"><section className="request-client-card"><div className="request-client-avatar">{demande.client.nom_complet.split(" ").slice(0,2).map((partie)=>partie[0]).join("")}</div><div><p className="eyebrow">Client</p><h3>{demande.client.nom_complet}</h3><span>{demande.client.adresse_email} · {demande.client.numero_telephone}</span></div></section><section><p className="eyebrow">Informations du client</p><div className="request-info-stack"><GroupeInformations titre="Souscripteur" donnees={objetDemande(donnees.souscripteur)}/><GroupeInformations titre="Assuré" donnees={objetDemande(donnees.assure)}/><GroupeInformations titre="Conducteur" donnees={conducteur}/><article className="request-info-group"><h4>Documents du client</h4><ListeDocumentsClient documents={documents} demandeReference={demande.reference} peutDecider={peutDeciderDocuments} onActualiser={onActualiser}/></article></div></section><section><p className="eyebrow">Informations de la demande</p><div className="request-info-stack"><GroupeInformations titre="Besoin exprimé" donnees={besoin}/><GroupeInformations titre="Véhicule" donnees={vehicule}/><GroupeInformations titre="Couverture et garanties" donnees={couverture}/><GroupeInformations titre="Informations complémentaires" donnees={informationsComplementaires}/></div></section></div>;
 }
 
 function RequestsView({ version, utilisateur, onOpen }: { version: number; utilisateur: UtilisateurBackoffice; onOpen:(reference:string)=>void }) {
@@ -415,7 +448,7 @@ function RequestDetailView({ reference, version, utilisateur, onBack }: { refere
     <button type="button" className="request-page-back" onClick={onBack}><ArrowLeft/>Retour aux demandes</button>
     {chargement&&!detail?<div className="loading-state request-page-loading"><LoaderCircle className="animate-spin"/>Chargement du dossier…</div>:erreur&&!detail?<div className="request-page-error"><TriangleAlert/><div><strong>Le dossier n’a pas pu être chargé</strong><span>{erreur}</span></div><Button variant="outline" onClick={onBack}>Revenir à la liste</Button></div>:detail&&<>
       <header className="request-page-header"><div><p className="eyebrow">Dossier client</p><h1>{detail.reference}</h1><p>{detail.client.nom_complet} · reçu le {new Date(detail.cree_le).toLocaleString("fr-FR",{dateStyle:"long",timeStyle:"short"})}</p></div><div className="request-page-badges"><Badge variant="secondary">{detail.sous_type==="voiture"?"Automobile · Voiture":"Automobile · Moto"}</Badge><StatusBadge value={libellesStatutsDemandes[detail.statut]}/></div></header>
-      <div className="request-page-grid"><main className="request-page-main"><FicheDemandeClient demande={detail}/></main><aside className="request-page-aside">
+      <div className="request-page-grid"><main className="request-page-main"><FicheDemandeClient demande={detail} peutDeciderDocuments={estGestionnaire||estResponsable} onActualiser={async()=>appliquer(await apiBackoffice.obtenirDemande(reference))}/></main><aside className="request-page-aside">
         <Card className="request-page-panel"><CardContent className="p-0"><p className="eyebrow">Prise en charge</p>{detail.responsable?<><div className="request-owner"><div><span>Responsable actuel</span><strong>{estResponsable?"Vous":detail.responsable.nom_complet}</strong><small>{detail.prise_en_charge_le&&`Depuis le ${new Date(detail.prise_en_charge_le).toLocaleString("fr-FR",{dateStyle:"medium",timeStyle:"short"})}`}</small></div>{estGestionnaire&&<Button variant="outline" disabled={Boolean(actionEnCours)} onClick={()=>void liberer()}>{actionEnCours==="liberation"&&<LoaderCircle className="animate-spin"/>}Libérer</Button>}</div>{estResponsable&&!estGestionnaire&&<p className="request-lock-note"><LockKeyhole/>Cette prise en charge est définitive. Seul un administrateur peut libérer ou réaffecter la demande.</p>}</>:<div className="request-claim"><div><strong>Cette demande est dans la file commune.</strong><span>Le premier utilisateur qui la prend devient définitivement son responsable.</span></div><Button disabled={Boolean(actionEnCours)} onClick={()=>void prendreEnCharge()}>{actionEnCours==="prise"&&<LoaderCircle className="animate-spin"/>}Prendre en charge</Button></div>}{detail.responsable&&estGestionnaire&&<div className="request-reassign"><Label>Réaffectation exceptionnelle</Label><Select value={responsableCible} onValueChange={setResponsableCible}><SelectTrigger className="w-full"><SelectValue placeholder="Choisir un responsable"/></SelectTrigger><SelectContent>{intervenants.map((intervenant)=><SelectItem key={intervenant.id} value={intervenant.id}>{intervenant.nom_complet} · {intervenant.role==="courtier"?"Courtier":intervenant.role==="admin"?"Admin":"Super-admin"}</SelectItem>)}</SelectContent></Select><Textarea value={motifReaffectation} onChange={(event)=>setMotifReaffectation(event.target.value)} placeholder="Motif obligatoire de la réaffectation"/><Button disabled={!responsableCible||responsableCible===detail.responsable.id||motifReaffectation.trim().length<3||Boolean(actionEnCours)} onClick={()=>void reaffecter()}>{actionEnCours==="reaffectation"&&<LoaderCircle className="animate-spin"/>}Réaffecter</Button></div>}</CardContent></Card>
         <Card className="request-page-panel"><CardContent className="p-0"><p className="eyebrow">Avancement automatique</p><ParcoursDemande statut={detail.statut}/></CardContent></Card>
       </aside></div>
