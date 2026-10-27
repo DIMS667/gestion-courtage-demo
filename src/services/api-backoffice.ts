@@ -52,6 +52,42 @@ export type DetailDemandeClient = ResumeDemandeClient & {
   donnees: Record<string, unknown>;
 };
 
+export type StatutSinistre =
+  | "declare"
+  | "en_analyse"
+  | "documents_en_attente"
+  | "documents_verifies"
+  | "transmis_assureur"
+  | "expertise"
+  | "decision"
+  | "indemnisation_en_cours"
+  | "indemnise"
+  | "cloture";
+
+export type ResumeSinistre = {
+  id: string;
+  reference: string;
+  contrat_reference: string;
+  produit: string;
+  libelle_produit: string;
+  type_sinistre: string;
+  date_sinistre: string;
+  lieu: string;
+  description: string;
+  statut: StatutSinistre;
+  client: ResumeDemandeClient["client"];
+  responsable: IntervenantDemande | null;
+  prise_en_charge_le: string | null;
+  cree_le: string;
+  modifie_le: string;
+};
+
+export type DetailSinistre = ResumeSinistre & {
+  donnees: Record<string, unknown>;
+  historique_statuts: Array<{ statut: StatutSinistre; cree_le: string }>;
+  prochain_statut: StatutSinistre | null;
+};
+
 export type ReponseAuthentification =
   | { statut: "connecte"; utilisateur: UtilisateurBackoffice; jeton_csrf: string }
   | { statut: "mot_de_passe_a_changer"; defi: string }
@@ -233,6 +269,52 @@ export const apiBackoffice = {
 
   creerFluxDemandes() {
     return new EventSource(`${URL_API}/backoffice/demandes-clients/flux`, {
+      withCredentials: true,
+    });
+  },
+
+  listerSinistres(parametres?: { statut?: StatutSinistre; recherche?: string }) {
+    const recherche = new URLSearchParams();
+    if (parametres?.statut) recherche.set("statut_sinistre", parametres.statut);
+    if (parametres?.recherche) recherche.set("recherche", parametres.recherche);
+    const suffixe = recherche.size ? `?${recherche.toString()}` : "";
+    return appeler<ResumeSinistre[]>(`/backoffice/sinistres${suffixe}`);
+  },
+
+  obtenirSinistre(reference: string) {
+    return appeler<DetailSinistre>(`/backoffice/sinistres/${encodeURIComponent(reference)}`);
+  },
+
+  prendreEnChargeSinistre(reference: string) {
+    return appeler<DetailSinistre>(
+      `/backoffice/sinistres/${encodeURIComponent(reference)}/prise-en-charge`,
+      { method: "POST" },
+    );
+  },
+
+  libererSinistre(reference: string) {
+    return appeler<DetailSinistre>(
+      `/backoffice/sinistres/${encodeURIComponent(reference)}/liberation`,
+      { method: "POST" },
+    );
+  },
+
+  reaffecterSinistre(reference: string, responsable_id: string, motif: string) {
+    return appeler<DetailSinistre>(
+      `/backoffice/sinistres/${encodeURIComponent(reference)}/reaffectation`,
+      { method: "POST", body: JSON.stringify({ responsable_id, motif }) },
+    );
+  },
+
+  avancerSinistre(reference: string) {
+    return appeler<DetailSinistre>(
+      `/backoffice/sinistres/${encodeURIComponent(reference)}/avancement`,
+      { method: "POST" },
+    );
+  },
+
+  creerFluxSinistres() {
+    return new EventSource(`${URL_API}/backoffice/sinistres/flux`, {
       withCredentials: true,
     });
   },
