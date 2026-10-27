@@ -17,6 +17,7 @@ import {
   FileCheck2,
   FileClock,
   FilePlus2,
+  FileText,
   Files,
   Gauge,
   Inbox,
@@ -31,6 +32,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
+  Eye,
   TriangleAlert,
   UserCog,
   Users,
@@ -297,6 +299,61 @@ function GroupeInformations({ titre, donnees }: { titre:string; donnees:Record<s
   return <article className="request-info-group"><h4>{titre}</h4><div className="request-info-grid">{champs.map(([champ,valeur])=><div className="request-info-item" key={champ}><span>{libelleChamp(champ)}</span><ValeurDemande valeur={valeur}/></div>)}</div></article>;
 }
 
+type DocumentDemandeClient = {
+  id:string;
+  titre:string;
+  nom_fichier:string;
+  type:string;
+  dossier:string;
+  statut:string;
+  date?:string;
+};
+
+function normaliserDocumentDemande(valeur:unknown):DocumentDemandeClient|null {
+  if(!valeur||typeof valeur!=="object"||Array.isArray(valeur))return null;
+  const document=valeur as Record<string,unknown>;
+  if(typeof document.id!=="string"||typeof document.titre!=="string")return null;
+  return {
+    id:document.id,
+    titre:document.titre,
+    nom_fichier:typeof document.nom_fichier==="string"?document.nom_fichier:"",
+    type:typeof document.type==="string"?document.type:"Document",
+    dossier:typeof document.dossier==="string"?document.dossier:"",
+    statut:typeof document.statut==="string"?document.statut:"recu",
+    date:typeof document.date==="string"?document.date:undefined,
+  };
+}
+
+function ListeDocumentsClient({ documents }: { documents:unknown[] }) {
+  const liste=documents.map(normaliserDocumentDemande).filter((document):document is DocumentDemandeClient=>document!==null&&Boolean(document.nom_fichier));
+  const [documentActif,setDocumentActif]=useState<DocumentDemandeClient|null>(null);
+  const [url,setUrl]=useState("");
+  const [chargement,setChargement]=useState(false);
+
+  const consulter=async(document:DocumentDemandeClient)=>{
+    setDocumentActif(document);
+    setUrl("");
+    setChargement(true);
+    try{
+      const lien=await apiBackoffice.obtenirLienConsultationDocument(document.id);
+      setUrl(lien.url);
+    }catch(cause){
+      toast.error(cause instanceof Error?cause.message:"Le document ne peut pas être consulté.");
+      setDocumentActif(null);
+    }finally{
+      setChargement(false);
+    }
+  };
+
+  if(liste.length===0)return <div className="request-documents-empty"><Files/><div><strong>Aucun document transmis</strong><span>Les documents déposés depuis le portail client apparaîtront ici dans son dossier.</span></div></div>;
+  return <>
+    <div className="request-document-table">{liste.map((document)=><div className="request-document-row" key={document.id}><span className="request-document-icon"><FileText/></span><div className="request-document-identity"><strong>{document.titre}</strong><span>{document.nom_fichier}</span></div><div className="request-document-meta"><Badge variant="secondary">{libellesValeurs[document.statut]??libelleChamp(document.statut)}</Badge>{document.date&&<small>{displayDate(document.date)}</small>}</div><Button variant="outline" size="sm" onClick={()=>void consulter(document)}><Eye/>Voir</Button></div>)}</div>
+    <Dialog open={Boolean(documentActif)} onOpenChange={(ouvert)=>{if(!ouvert){setDocumentActif(null);setUrl("");}}}>
+      <DialogContent className="document-viewer-dialog"><DialogHeader><DialogTitle>{documentActif?.titre}</DialogTitle><DialogDescription>{documentActif?.nom_fichier} · lien sécurisé temporaire</DialogDescription></DialogHeader>{chargement?<div className="document-viewer-skeleton" aria-label="Chargement du document"><span/><span/><span/></div>:url?<iframe className="document-viewer-frame" src={url} title={documentActif?.titre}/>:null}{url&&<DialogFooter><Button variant="outline" onClick={()=>window.open(url,"_blank","noopener,noreferrer")}>Ouvrir dans un nouvel onglet</Button></DialogFooter>}</DialogContent>
+    </Dialog>
+  </>;
+}
+
 function ParcoursDemande({ statut }: { statut:StatutDemande }) {
   const indexActuel=chaineStatutsDemandes.findIndex((etape)=>etape.statut===statut);
   return <div className="request-progress">{chaineStatutsDemandes.map((etape,index)=><div key={etape.statut} className={`${index<indexActuel?"is-done ":""}${index===indexActuel?"is-current":""}`}><span>{index<indexActuel?<Check/>:index+1}</span><div><strong>{etape.libelle}</strong><small>{etape.description}</small></div></div>)}</div>;
@@ -316,7 +373,7 @@ function FicheDemandeClient({ demande }: { demande:DetailDemandeClient }) {
   const besoin={type_besoin:donnees.type_besoin,precision_autre_besoin:donnees.precision_autre_besoin,message_delegation:donnees.message_delegation,possede_vignette:donnees.possede_vignette};
   const champsDejaAffiches=new Set(["souscripteur","assure","conducteur","vehicule","couverture","documents","pieces_jointes","type_besoin","precision_autre_besoin","message_delegation","possede_vignette"]);
   const informationsComplementaires=Object.fromEntries(Object.entries(donnees).filter(([champ])=>!champsDejaAffiches.has(champ)));
-  return <div className="request-dossier-content"><section className="request-client-card"><div className="request-client-avatar">{demande.client.nom_complet.split(" ").slice(0,2).map((partie)=>partie[0]).join("")}</div><div><p className="eyebrow">Client</p><h3>{demande.client.nom_complet}</h3><span>{demande.client.adresse_email} · {demande.client.numero_telephone}</span></div></section><section><p className="eyebrow">Informations du client</p><div className="request-info-stack"><GroupeInformations titre="Souscripteur" donnees={objetDemande(donnees.souscripteur)}/><GroupeInformations titre="Assuré" donnees={objetDemande(donnees.assure)}/><GroupeInformations titre="Conducteur" donnees={conducteur}/><article className="request-info-group"><h4>Documents du client</h4>{documents.length?<div className="request-document-list">{documents.map((document,index)=><div key={index}><Files/><ValeurDemande valeur={document}/></div>)}</div>:<div className="request-documents-empty"><Files/><div><strong>Aucun document transmis</strong><span>Les documents déposés depuis le portail client apparaîtront ici dans son dossier.</span></div></div>}</article></div></section><section><p className="eyebrow">Informations de la demande</p><div className="request-info-stack"><GroupeInformations titre="Besoin exprimé" donnees={besoin}/><GroupeInformations titre="Véhicule" donnees={vehicule}/><GroupeInformations titre="Couverture et garanties" donnees={couverture}/><GroupeInformations titre="Informations complémentaires" donnees={informationsComplementaires}/></div></section></div>;
+  return <div className="request-dossier-content"><section className="request-client-card"><div className="request-client-avatar">{demande.client.nom_complet.split(" ").slice(0,2).map((partie)=>partie[0]).join("")}</div><div><p className="eyebrow">Client</p><h3>{demande.client.nom_complet}</h3><span>{demande.client.adresse_email} · {demande.client.numero_telephone}</span></div></section><section><p className="eyebrow">Informations du client</p><div className="request-info-stack"><GroupeInformations titre="Souscripteur" donnees={objetDemande(donnees.souscripteur)}/><GroupeInformations titre="Assuré" donnees={objetDemande(donnees.assure)}/><GroupeInformations titre="Conducteur" donnees={conducteur}/><article className="request-info-group"><h4>Documents du client</h4><ListeDocumentsClient documents={documents}/></article></div></section><section><p className="eyebrow">Informations de la demande</p><div className="request-info-stack"><GroupeInformations titre="Besoin exprimé" donnees={besoin}/><GroupeInformations titre="Véhicule" donnees={vehicule}/><GroupeInformations titre="Couverture et garanties" donnees={couverture}/><GroupeInformations titre="Informations complémentaires" donnees={informationsComplementaires}/></div></section></div>;
 }
 
 function RequestsView({ version, utilisateur, onOpen }: { version: number; utilisateur: UtilisateurBackoffice; onOpen:(reference:string)=>void }) {

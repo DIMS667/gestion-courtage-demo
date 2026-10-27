@@ -326,6 +326,24 @@ button, input { font: inherit; }
 .request-document-list { display: grid; gap: .55rem; padding: .8rem; }
 .request-document-list > div { display: flex; align-items: center; gap: .6rem; border-radius: .65rem; padding: .65rem; background: #f7f9fb; }
 .request-document-list > div > svg { width: 1rem; color: #2771aa; }
+.request-document-table { display: grid; }
+.request-document-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: .7rem; padding: .62rem .8rem; border-bottom: 1px solid #edf1f4; }
+.request-document-row:last-child { border-bottom: 0; }
+.request-document-icon { display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: .55rem; background: #edf5fb; color: #2771aa; }
+.request-document-icon svg { width: .95rem; }
+.request-document-identity { display: grid; min-width: 0; gap: .1rem; }
+.request-document-identity strong { overflow: hidden; color: #263e55; font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
+.request-document-identity span { overflow: hidden; color: #748496; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+.request-document-meta { display: flex; align-items: center; gap: .5rem; }
+.request-document-meta small { color: #7b8997; font-size: .66rem; white-space: nowrap; }
+.document-viewer-dialog { width: min(94vw, 70rem) !important; max-width: 70rem !important; }
+.document-viewer-frame { width: 100%; height: min(72vh, 48rem); border: 1px solid #dfe7ee; border-radius: .75rem; background: #f6f8fa; }
+.document-viewer-skeleton { display: grid; height: min(72vh, 48rem); align-content: start; gap: 1rem; padding: 2rem; border-radius: .75rem; background: #f5f7f9; }
+.document-viewer-skeleton span { height: 1rem; border-radius: 999px; background: linear-gradient(90deg,#e9edf1 25%,#f8fafb 50%,#e9edf1 75%); background-size: 200% 100%; animation: skeleton-slide 1.25s infinite linear; }
+.document-viewer-skeleton span:nth-child(2) { width: 72%; }
+.document-viewer-skeleton span:nth-child(3) { width: 48%; }
+@keyframes skeleton-slide { to { background-position: -200% 0; } }
+@media (max-width: 700px) { .request-document-row { grid-template-columns: auto minmax(0, 1fr) auto; } .request-document-meta { display: none; } }
 .request-fields { display: grid; gap: .65rem; }
 .request-fields--root { gap: 1rem; }
 .request-field { min-width: 0; display: grid; gap: .3rem; border: 1px solid #e2e9f0; border-radius: .7rem; background: #f8fafc; padding: .7rem .8rem; }

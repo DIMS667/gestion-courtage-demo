@@ -88,6 +88,11 @@ export type DetailSinistre = ResumeSinistre & {
   prochain_statut: StatutSinistre | null;
 };
 
+export type LienConsultationDocument = {
+  url: string;
+  expire_dans_secondes: number;
+};
+
 export type ReponseAuthentification =
   | { statut: "connecte"; utilisateur: UtilisateurBackoffice; jeton_csrf: string }
   | { statut: "mot_de_passe_a_changer"; defi: string }
@@ -239,6 +244,12 @@ export const apiBackoffice = {
   obtenirDemande(reference: string) {
     return appeler<DetailDemandeClient>(
       `/backoffice/demandes-clients/${encodeURIComponent(reference)}`,
+    );
+  },
+
+  obtenirLienConsultationDocument(documentId: string) {
+    return appeler<LienConsultationDocument>(
+      `/backoffice/documents/${encodeURIComponent(documentId)}/consultation`,
     );
   },
 
