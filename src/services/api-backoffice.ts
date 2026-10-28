@@ -1,5 +1,20 @@
 export type RoleBackoffice = "courtier" | "admin" | "super_admin";
 export type StatutBackoffice = "actif" | "bloque";
+export type StatutCompteClient = "en_attente_verification" | "actif" | "bloque";
+
+export type ClientBackoffice = {
+  id: string;
+  nom_complet: string;
+  adresse_email: string;
+  numero_telephone: string;
+  adresse: string;
+  ville: string;
+  statut: StatutCompteClient;
+  cree_le: string;
+  nombre_demandes: number;
+  nombre_sinistres: number;
+  nombre_documents: number;
+};
 
 export type UtilisateurBackoffice = {
   id: string;
@@ -231,6 +246,27 @@ export const apiBackoffice = {
 
   listerUtilisateurs() {
     return appeler<UtilisateurBackoffice[]>("/backoffice/utilisateurs");
+  },
+
+  listerClients(parametres?: { recherche?: string }) {
+    const recherche = new URLSearchParams();
+    if (parametres?.recherche) recherche.set("recherche", parametres.recherche);
+    const suffixe = recherche.size ? `?${recherche.toString()}` : "";
+    return appeler<ClientBackoffice[]>(`/backoffice/clients${suffixe}`);
+  },
+
+  creerClient(entree: {
+    nom_complet: string;
+    adresse_email: string;
+    numero_telephone: string;
+    adresse: string;
+    ville: string;
+    mot_de_passe_initial: string;
+  }) {
+    return appeler<ClientBackoffice>("/backoffice/clients", {
+      method: "POST",
+      body: JSON.stringify(entree),
+    });
   },
 
   creerUtilisateur(entree: {
