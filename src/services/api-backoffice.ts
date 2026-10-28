@@ -125,6 +125,27 @@ export type TableauDeBordBackoffice = {
   sinistres_declares: number;
 };
 
+export type RapportActiviteBackoffice = {
+  indicateurs: {
+    clients_total: number;
+    demandes_total: number;
+    demandes_finalisees: number;
+    sinistres_total: number;
+    sinistres_ouverts: number;
+    documents_total: number;
+    documents_correction_requise: number;
+  };
+  evolution_mensuelle: Array<{
+    mois: string;
+    clients: number;
+    demandes: number;
+    sinistres: number;
+  }>;
+  repartition_demandes: Array<{ libelle: string; valeur: number }>;
+  repartition_sinistres: Array<{ libelle: string; valeur: number }>;
+  repartition_documents: Array<{ libelle: string; valeur: number }>;
+};
+
 export type LienConsultationDocument = {
   url: string;
   expire_dans_secondes: number;
@@ -203,6 +224,10 @@ async function appeler<T>(chemin: string, options: RequestInit = {}): Promise<T>
 export const apiBackoffice = {
   obtenirTableauDeBord() {
     return appeler<TableauDeBordBackoffice>("/backoffice/tableau-de-bord");
+  },
+
+  obtenirRapportActivite() {
+    return appeler<RapportActiviteBackoffice>("/backoffice/rapports");
   },
 
   connecter(adresse_email: string, mot_de_passe: string) {
