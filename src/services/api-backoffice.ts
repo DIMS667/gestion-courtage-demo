@@ -88,6 +88,28 @@ export type DetailSinistre = ResumeSinistre & {
   prochain_statut: StatutSinistre | null;
 };
 
+export type TableauDeBordBackoffice = {
+  indicateurs: {
+    clients_total: number;
+    clients_actifs: number;
+    nouveaux_clients_mois: number;
+    demandes_total: number;
+    demandes_en_cours: number;
+    demandes_non_affectees: number;
+    sinistres_ouverts: number;
+    sinistres_non_affectes: number;
+  };
+  evolution_mensuelle: Array<{
+    mois: string;
+    clients: number;
+    demandes: number;
+    sinistres: number;
+  }>;
+  repartition_demandes: Array<{ libelle: string; valeur: number }>;
+  demandes_nouvelles: number;
+  sinistres_declares: number;
+};
+
 export type LienConsultationDocument = {
   url: string;
   expire_dans_secondes: number;
@@ -164,6 +186,10 @@ async function appeler<T>(chemin: string, options: RequestInit = {}): Promise<T>
 }
 
 export const apiBackoffice = {
+  obtenirTableauDeBord() {
+    return appeler<TableauDeBordBackoffice>("/backoffice/tableau-de-bord");
+  },
+
   connecter(adresse_email: string, mot_de_passe: string) {
     return appeler<ReponseAuthentification>("/backoffice/authentification/connexions", {
       method: "POST",

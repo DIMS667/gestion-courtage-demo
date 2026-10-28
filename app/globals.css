@@ -153,6 +153,25 @@ button, input { font: inherit; }
 .cash-progress { height: .55rem; overflow: hidden; margin: 1rem 0 1.4rem; border-radius: 99px; background: #ffffff2b; }
 .cash-progress span { display: block; height: 100%; border-radius: inherit; background: #65d0c9; }
 .cash-footer { display: flex; align-items: center; justify-content: space-between; }
+.dashboard-summary-card { color: white; background: linear-gradient(145deg, #11365e, #176ca8); }
+.dashboard-summary-card .eyebrow { color: #a9d5f5; }
+.dashboard-summary-card h2 { margin: 0 0 1rem; font-size: 1.2rem; }
+.dashboard-summary-card dl { display: grid; gap: .25rem; margin: 0; }
+.dashboard-summary-card dl div { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #ffffff24; padding: .8rem 0; }
+.dashboard-summary-card dl div:last-child { border-bottom: 0; }
+.dashboard-summary-card dt { color: #c7e1f5; font-size: .86rem; }
+.dashboard-summary-card dd { margin: 0; font-size: 1.2rem; font-weight: 800; }
+.dashboard-empty { display: grid; min-height: 16rem; place-content: center; justify-items: center; gap: .7rem; color: #7b8797; }
+.dashboard-empty svg { width: 1.7rem; }
+.dashboard-warning { display: flex; align-items: center; gap: .55rem; margin: 0 0 1rem; border: 1px solid #f1d7a9; border-radius: .75rem; padding: .7rem .85rem; background: #fff8e9; color: #8b5a13; font-size: .82rem; }
+.dashboard-warning svg { width: 1rem; }
+.dashboard-skeleton { display: grid; gap: 1.5rem; }
+.skeleton { overflow: hidden; position: relative; border-radius: .85rem; background: #e7edf4; }
+.skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, #ffffff90, transparent); animation: dashboard-shimmer 1.4s infinite; }
+.skeleton--heading { width: min(32rem, 75%); height: 5rem; }
+.skeleton--stat { height: 9rem; }
+.skeleton--panel { height: 20rem; }
+@keyframes dashboard-shimmer { 100% { transform: translateX(100%); } }
 
 .toolbar { display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem; }
 .filter-search { display: flex; min-width: min(26rem, 50vw); align-items: center; border: 1px solid #d8e2ec; border-radius: .7rem; padding-left: .75rem; background: white; color: #8491a2; }
