@@ -1,4 +1,4 @@
-export type RoleBackoffice = "courtier" | "admin" | "super_admin";
+export type RoleBackoffice = "gestionnaire" | "admin" | "super_admin";
 export type StatutBackoffice = "actif" | "bloque";
 export type StatutCompteClient = "en_attente_verification" | "actif" | "bloque";
 
