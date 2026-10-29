@@ -75,7 +75,16 @@ import { apiBackoffice, ClientBackoffice, DetailDemandeClient, DetailSinistre, e
 const STORAGE_KEY = "gestion-courtage-demo-v1";
 const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XAF", maximumFractionDigits: 0 });
 const shortMoney = (value: number) => value >= 1_000_000 ? `${(value / 1_000_000).toFixed(1).replace(".0", "")} M FCFA` : money.format(value).replace("XAF", "FCFA");
-const displayDate = (value: string) => new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${value}T12:00:00`));
+const displayDate = (value: string | null | undefined) => {
+  if (!value) return "—";
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+};
 
 const lireReferenceDemandeUrl = () => {
   if (typeof window === "undefined") return null;
