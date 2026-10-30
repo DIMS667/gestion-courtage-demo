@@ -497,7 +497,7 @@ button, input { font: inherit; }
   .stat-grid, .summary-grid, .detail-stats { grid-template-columns: 1fr; }
   .page-heading { align-items: start; flex-direction: column; }
   .dashboard-wrap { padding: 1rem; }
-  .app-topbar button:not([data-sidebar="trigger"]):last-child { display: none; }
+  .app-topbar > div:last-child > .topbar-logout { display: none; }
   .app-topbar > div:last-child > button:nth-child(2) { display: none; }
   .product-grid, .document-grid, .kpi-strip, .choice-grid, .offer-preview { grid-template-columns: 1fr; }
   .renewal-group article, .renewal-group article > div:last-child { align-items: flex-start; flex-direction: column; }

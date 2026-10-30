@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Activity,
   ArrowLeft,
@@ -71,6 +71,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
 import { Claim, Client, createDemoData, DemoData, Offer, Opportunity, Policy, Proposal, companies, products, users } from "@/src/demo-data";
 import { apiBackoffice, ClientBackoffice, DetailDemandeClient, DetailSinistre, enregistrerSession, IntervenantDemande, MotifCorrectionDocument, oublierSession, RapportActiviteBackoffice, ReponseAuthentification, ResumeDemandeClient, ResumeSinistre, RoleBackoffice, StatutBackoffice, StatutDemande, StatutSinistre, TableauDeBordBackoffice, UtilisateurBackoffice } from "@/src/services/api-backoffice";
+import { initialiserAlerteSonore, jouerAlerteSonore } from "@/src/services/notification-sound";
 
 const STORAGE_KEY = "gestion-courtage-demo-v1";
 const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XAF", maximumFractionDigits: 0 });
@@ -86,6 +87,59 @@ const displayDate = (value: string | null | undefined) => {
   }).format(date);
 };
 
+type NotificationBackoffice = {
+  id: string;
+  type: "demande" | "sinistre";
+  titre: string;
+  message: string;
+  date: string;
+  reference: string;
+  lue: boolean;
+};
+
+const CLE_NOTIFICATIONS_LUES = "gestion-courtage-notifications-lues-v1";
+const cleNotificationsLues = (utilisateurId: string) => `${CLE_NOTIFICATIONS_LUES}:${utilisateurId}`;
+const lireNotificationsLues = (utilisateurId: string) => {
+  if (typeof window === "undefined") return new Set<string>();
+  try {
+    const valeur = JSON.parse(localStorage.getItem(cleNotificationsLues(utilisateurId)) ?? "[]");
+    return new Set<string>(Array.isArray(valeur) ? valeur.filter((id): id is string => typeof id === "string") : []);
+  } catch {
+    return new Set<string>();
+  }
+};
+const sauvegarderNotificationsLues = (utilisateurId: string, ids: Iterable<string>) => {
+  localStorage.setItem(cleNotificationsLues(utilisateurId), JSON.stringify([...new Set(ids)]));
+};
+const notificationDemande = (demande: ResumeDemandeClient, lues: Set<string>): NotificationBackoffice => ({
+  id: `demande:${demande.reference}`,
+  type: "demande",
+  titre: "Nouvelle demande client",
+  message: `${demande.client.nom_complet} a transmis une demande ${demande.sous_type === "moto_deux_trois_roues" ? "moto" : "automobile"}.`,
+  date: demande.cree_le,
+  reference: demande.reference,
+  lue: lues.has(`demande:${demande.reference}`),
+});
+const notificationSinistre = (sinistre: ResumeSinistre, lues: Set<string>): NotificationBackoffice => ({
+  id: `sinistre:${sinistre.reference}`,
+  type: "sinistre",
+  titre: "Nouveau sinistre déclaré",
+  message: `${sinistre.client.nom_complet} a déclaré un sinistre ${sinistre.libelle_produit.toLowerCase()}.`,
+  date: sinistre.cree_le,
+  reference: sinistre.reference,
+  lue: lues.has(`sinistre:${sinistre.reference}`),
+});
+const fusionnerNotifications = (courantes: NotificationBackoffice[], ajouts: NotificationBackoffice[]) => {
+  const uniques = new Map(courantes.map((notification) => [notification.id, notification]));
+  ajouts.forEach((notification) => uniques.set(notification.id, notification));
+  return [...uniques.values()].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+};
+const dateNotification = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "À l’instant";
+  return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(date);
+};
+
 const lireReferenceDemandeUrl = () => {
   if (typeof window === "undefined") return null;
   return new URLSearchParams(window.location.search).get("demande");
@@ -94,10 +148,11 @@ const estVueDemandesUrl = () => typeof window !== "undefined" && (Boolean(lireRe
 const lireReferenceSinistreUrl = () => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("sinistre");
 const estVueSinistresUrl = () => typeof window !== "undefined" && (Boolean(lireReferenceSinistreUrl()) || new URLSearchParams(window.location.search).get("vue") === "sinistres");
 
-type ModuleId = "dashboard" | "requests" | "clients" | "opportunities" | "activities" | "proposals" | "policies" | "transactions" | "products" | "companies" | "transmissions" | "invoices" | "payments" | "commissions" | "documents" | "renewals" | "claims" | "reports" | "users" | "roles" | "settings";
+type ModuleId = "dashboard" | "notifications" | "requests" | "clients" | "opportunities" | "activities" | "proposals" | "policies" | "transactions" | "products" | "companies" | "transmissions" | "invoices" | "payments" | "commissions" | "documents" | "renewals" | "claims" | "reports" | "users" | "roles" | "settings";
 
 const navGroups: Array<{ label: string; items: Array<{ id: ModuleId; label: string; icon: typeof Gauge }> }> = [
   { label: "", items: [{ id: "dashboard", label: "Tableau de bord", icon: Gauge }] },
+  { label: "Communication", items: [{ id: "notifications", label: "Notifications", icon: Bell }] },
   { label: "CRM", items: [{ id: "requests", label: "Demandes clients", icon: Inbox }, { id: "clients", label: "Clients", icon: Users }, { id: "opportunities", label: "Opportunités", icon: BriefcaseBusiness }, { id: "activities", label: "Activités", icon: Activity }] },
   { label: "Production", items: [{ id: "proposals", label: "Propositions", icon: FileCheck2 }, { id: "policies", label: "Polices", icon: ShieldCheck }, { id: "transactions", label: "Transactions", icon: ClipboardCheck }, { id: "products", label: "Produits", icon: PackageCheck }] },
   { label: "Partenaires", items: [{ id: "companies", label: "Compagnies", icon: Building2 }, { id: "transmissions", label: "Transmissions assureurs", icon: FileClock }] },
@@ -135,6 +190,63 @@ function TableCard({ children }: { children: React.ReactNode }) {
 function NavItem({ item, current, onSelect, notification }: { item: { id: ModuleId; label: string; icon: typeof Gauge }; current: ModuleId; onSelect: (id: ModuleId) => void; notification?: number }) {
   const { isMobile, setOpenMobile } = useSidebar();
   return <SidebarMenuItem><SidebarMenuButton onClick={() => { onSelect(item.id); if (isMobile) setOpenMobile(false); }} isActive={current===item.id} tooltip={item.label} className="h-9 text-blue-100 hover:bg-white/10 hover:text-white data-[active=true]:bg-white data-[active=true]:text-[#15385f]"><item.icon/><span>{item.label}</span>{Boolean(notification)&&<span className="nav-notification">{notification!>99?"99+":notification}</span>}</SidebarMenuButton></SidebarMenuItem>;
+}
+
+function NotificationsBackofficePopover({ notifications, onOpen, onShowAll }: { notifications: NotificationBackoffice[]; onOpen: (notification: NotificationBackoffice) => void; onShowAll: () => void }) {
+  const [ouvert, setOuvert] = useState(false);
+  const conteneurRef = useRef<HTMLDivElement>(null);
+  const nonLues = notifications.filter((notification) => !notification.lue);
+  const recentes = nonLues.slice(0, 5);
+
+  useEffect(() => {
+    if (!ouvert) return;
+    const fermerExterieur = (event: PointerEvent) => {
+      if (!conteneurRef.current?.contains(event.target as Node)) setOuvert(false);
+    };
+    const fermerClavier = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOuvert(false);
+    };
+    document.addEventListener("pointerdown", fermerExterieur);
+    document.addEventListener("keydown", fermerClavier);
+    return () => {
+      document.removeEventListener("pointerdown", fermerExterieur);
+      document.removeEventListener("keydown", fermerClavier);
+    };
+  }, [ouvert]);
+
+  return <div ref={conteneurRef} className="relative">
+    <Button className="notification-button" size="icon" variant="ghost" aria-label="Notifications" aria-expanded={ouvert} aria-controls="notifications-backoffice-popover" onClick={() => setOuvert((valeur) => !valeur)}>
+      <Bell/>{nonLues.length>0&&<span>{nonLues.length>99?"99+":nonLues.length}</span>}
+    </Button>
+    {ouvert&&<div id="notifications-backoffice-popover" role="dialog" aria-label="Nouvelles notifications" className="absolute right-0 top-[calc(100%+0.7rem)] z-50 w-[min(25rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-2xl">
+      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+        <div><p className="text-sm font-semibold">Nouvelles notifications</p><p className="text-xs text-slate-500">{nonLues.length ? `${nonLues.length} non lue${nonLues.length>1?"s":""}` : "Vous êtes à jour"}</p></div>
+        <Bell className="size-5 text-[#d71920]"/>
+      </div>
+      <div className="max-h-[22rem] overflow-y-auto">
+        {recentes.length ? recentes.map((notification) => <button key={notification.id} type="button" className="flex w-full items-start gap-3 border-b border-slate-100 px-4 py-3 text-left transition hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none" onClick={() => { setOuvert(false); onOpen(notification); }}>
+          <span className={`mt-0.5 grid size-9 shrink-0 place-items-center rounded-full ${notification.type==="sinistre"?"bg-amber-50 text-amber-700":"bg-red-50 text-[#d71920]"}`}>{notification.type==="sinistre"?<TriangleAlert className="size-4"/>:<Inbox className="size-4"/>}</span>
+          <span className="min-w-0 flex-1"><strong className="block text-sm font-semibold">{notification.titre}</strong><span className="mt-0.5 block text-xs leading-5 text-slate-600">{notification.message}</span><span className="mt-1 block text-[0.7rem] font-medium text-slate-400">{dateNotification(notification.date)} · {notification.reference}</span></span>
+          <span className="mt-2 size-2 shrink-0 rounded-full bg-[#d71920]" aria-label="Non lue"/>
+        </button>) : <div className="grid min-h-44 place-items-center px-6 py-8 text-center"><div><Bell className="mx-auto mb-3 size-7 text-slate-400"/><p className="text-sm font-medium">Aucune nouvelle notification</p><p className="mt-1 text-xs text-slate-500">Les nouvelles demandes et déclarations apparaîtront ici.</p></div></div>}
+      </div>
+      <button type="button" className="w-full border-t border-slate-100 px-4 py-3 text-sm font-semibold text-[#15385f] transition hover:bg-slate-50" onClick={() => { setOuvert(false); onShowAll(); }}>Afficher toutes les notifications</button>
+    </div>}
+  </div>;
+}
+
+function NotificationsBackofficeView({ notifications, onOpen, onMarkAllRead }: { notifications: NotificationBackoffice[]; onOpen: (notification: NotificationBackoffice) => void; onMarkAllRead: () => void }) {
+  const nonLues = notifications.filter((notification) => !notification.lue).length;
+  return <section>
+    <PageHeading eyebrow="Communication" title="Notifications" subtitle="Retrouvez les nouvelles demandes et les déclarations de sinistre reçues en temps réel." action={nonLues?<Button variant="outline" onClick={onMarkAllRead}><Check/>Tout marquer comme lu</Button>:undefined}/>
+    <Card className="mt-6 overflow-hidden"><CardContent className="p-0">
+      {notifications.length ? notifications.map((notification) => <button key={notification.id} type="button" className={`flex w-full items-start gap-4 border-b border-slate-100 px-5 py-4 text-left transition last:border-b-0 hover:bg-slate-50 ${notification.lue?"bg-white":"bg-red-50/40"}`} onClick={() => onOpen(notification)}>
+        <span className={`grid size-11 shrink-0 place-items-center rounded-xl ${notification.type==="sinistre"?"bg-amber-50 text-amber-700":"bg-red-50 text-[#d71920]"}`}>{notification.type==="sinistre"?<TriangleAlert className="size-5"/>:<Inbox className="size-5"/>}</span>
+        <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><strong className="text-sm font-semibold text-slate-900">{notification.titre}</strong>{!notification.lue&&<Badge className="bg-[#d71920] text-white">Nouvelle</Badge>}</span><span className="mt-1 block text-sm text-slate-600">{notification.message}</span><span className="mt-2 block text-xs text-slate-400">{dateNotification(notification.date)} · {notification.reference}</span></span>
+        <ChevronRight className="mt-3 size-5 shrink-0 text-slate-400"/>
+      </button>) : <div className="grid min-h-72 place-items-center px-6 text-center"><div><Bell className="mx-auto mb-4 size-9 text-slate-400"/><h2 className="font-semibold text-slate-900">Aucune notification</h2><p className="mt-1 text-sm text-slate-500">Les prochaines activités clients apparaîtront ici.</p></div></div>}
+    </CardContent></Card>
+  </section>;
 }
 
 function Login({ onConnect }: { onConnect: (utilisateur: UtilisateurBackoffice) => void }) {
@@ -679,10 +791,14 @@ export function CourtierApp() {
   const [versionClients,setVersionClients]=useState(0);
   const [nouvellesDemandes,setNouvellesDemandes]=useState(0);
   const [nouveauxSinistres,setNouveauxSinistres]=useState(0);
+  const [notificationsBackoffice,setNotificationsBackoffice]=useState<NotificationBackoffice[]>([]);
+  const idsNotificationsRef=useRef(new Set<string>());
   const [data,setData]=useState<DemoData>(()=>createDemoData());
   const [hydrated,setHydrated]=useState(false);
   const [selectedClient,setSelectedClient]=useState<ClientBackoffice|null>(null); const [selectedPolicy,setSelectedPolicy]=useState<Policy|null>(null); const [selectedProposal,setSelectedProposal]=useState<Proposal|null>(null); const [selectedOpportunity,setSelectedOpportunity]=useState<Opportunity|null>(null); const [selectedClaim,setSelectedClaim]=useState<Claim|null>(null);
   const [clientDialog,setClientDialog]=useState(false); const [opportunityDialog,setOpportunityDialog]=useState(false); const [proposalWizard,setProposalWizard]=useState(false); const [paymentDialog,setPaymentDialog]=useState(false);
+
+  useEffect(()=>initialiserAlerteSonore(),[]);
 
   useEffect(()=>{const synchroniser=()=>{setReferenceDemandeOuverte(lireReferenceDemandeUrl());setReferenceSinistreOuvert(lireReferenceSinistreUrl());if(estVueDemandesUrl())setActive("requests");else if(estVueSinistresUrl())setActive("claims");};window.addEventListener("popstate",synchroniser);return()=>window.removeEventListener("popstate",synchroniser);},[]);
 
@@ -693,11 +809,11 @@ export function CourtierApp() {
   const revenirListeSinistres=()=>{window.history.replaceState({},"","/?vue=sinistres");setReferenceSinistreOuvert(null);setActive("claims");setNouveauxSinistres(0);window.scrollTo({top:0,behavior:"smooth"});};
   const ouvrirSinistre=(reference:string)=>{window.history.pushState({},"",`/?sinistre=${encodeURIComponent(reference)}`);setReferenceSinistreOuvert(reference);setActive("claims");setNouveauxSinistres(0);window.scrollTo({top:0,behavior:"smooth"});};
 
-  useEffect(()=>{let actif=true;apiBackoffice.obtenirSession().then((reponse)=>{if(!actif)return;enregistrerSession(reponse);setUtilisateurConnecte(reponse.utilisateur);}).catch(()=>{if(actif){oublierSession();setUtilisateurConnecte(null);}});return()=>{actif=false};},[]);
+  useEffect(()=>{let actif=true;apiBackoffice.obtenirSession().then((reponse)=>{if(!actif)return;idsNotificationsRef.current.clear();setNotificationsBackoffice([]);enregistrerSession(reponse);setUtilisateurConnecte(reponse.utilisateur);}).catch(()=>{if(actif){oublierSession();setUtilisateurConnecte(null);}});return()=>{actif=false};},[]);
 
   const utilisateurConnecteId=utilisateurConnecte?.id;
-  useEffect(()=>{if(!utilisateurConnecteId)return;let actif=true;apiBackoffice.listerDemandes({statut:"nouvelle"}).then((demandes)=>{if(actif)setNouvellesDemandes(demandes.length);}).catch(()=>undefined);const flux=apiBackoffice.creerFluxDemandes();const evenementDemande=(evenement:Event)=>{if(!actif)return;let type="";try{type=JSON.parse((evenement as MessageEvent<string>).data)?.type??"";}catch{type="";}setVersionDemandes((version)=>version+1);if(type==="documents_client_modifies")setVersionSinistres((version)=>version+1);if(type==="nouvelle_demande"){setNouvellesDemandes((total)=>total+1);toast.info("Une nouvelle demande client vient d’être reçue.",{action:{label:"Consulter",onClick:ouvrirListeDemandes}});}};flux.addEventListener("demande",evenementDemande);return()=>{actif=false;flux.removeEventListener("demande",evenementDemande);flux.close();};},[utilisateurConnecteId]);
-  useEffect(()=>{if(!utilisateurConnecteId)return;let actif=true;apiBackoffice.listerSinistres({statut:"declare"}).then((sinistres)=>{if(actif)setNouveauxSinistres(sinistres.length);}).catch(()=>undefined);const flux=apiBackoffice.creerFluxSinistres();const evenementSinistre=(evenement:Event)=>{if(!actif)return;let type="";try{type=JSON.parse((evenement as MessageEvent<string>).data)?.type??"";}catch{type="";}setVersionSinistres((version)=>version+1);if(type==="nouveau_sinistre"){setNouveauxSinistres((total)=>total+1);toast.info("Un nouveau sinistre vient d’être déclaré.",{action:{label:"Consulter",onClick:ouvrirListeSinistres}});}};flux.addEventListener("sinistre",evenementSinistre);return()=>{actif=false;flux.removeEventListener("sinistre",evenementSinistre);flux.close();};},[utilisateurConnecteId]);
+  useEffect(()=>{if(!utilisateurConnecteId)return;let actif=true;const lues=lireNotificationsLues(utilisateurConnecteId);apiBackoffice.listerDemandes({statut:"nouvelle"}).then((demandes)=>{if(!actif)return;setNouvellesDemandes(demandes.length);const ajouts=demandes.map((demande)=>notificationDemande(demande,lues));ajouts.forEach((notification)=>idsNotificationsRef.current.add(notification.id));setNotificationsBackoffice((courantes)=>fusionnerNotifications(courantes,ajouts));}).catch(()=>undefined);const flux=apiBackoffice.creerFluxDemandes();const evenementDemande=(evenement:Event)=>{if(!actif)return;let donnees:{type?:string;reference?:string;sous_type?:string}={};try{donnees=JSON.parse((evenement as MessageEvent<string>).data)??{};}catch{donnees={};}setVersionDemandes((version)=>version+1);if(donnees.type==="documents_client_modifies")setVersionSinistres((version)=>version+1);if(donnees.type==="nouvelle_demande"){setNouvellesDemandes((total)=>total+1);const reference=donnees.reference??`nouvelle-${Date.now()}`;const notification:NotificationBackoffice={id:`demande:${reference}`,type:"demande",titre:"Nouvelle demande client",message:`Une nouvelle demande ${donnees.sous_type==="moto_deux_trois_roues"?"moto":"automobile"} vient d’être transmise.`,date:new Date().toISOString(),reference,lue:false};if(!idsNotificationsRef.current.has(notification.id)){idsNotificationsRef.current.add(notification.id);setNotificationsBackoffice((courantes)=>fusionnerNotifications(courantes,[notification]));void jouerAlerteSonore();}toast.info("Une nouvelle demande client vient d’être reçue.",{action:{label:"Consulter",onClick:()=>ouvrirDemande(reference)}});}};flux.addEventListener("demande",evenementDemande);return()=>{actif=false;flux.removeEventListener("demande",evenementDemande);flux.close();};},[utilisateurConnecteId]);
+  useEffect(()=>{if(!utilisateurConnecteId)return;let actif=true;const lues=lireNotificationsLues(utilisateurConnecteId);apiBackoffice.listerSinistres({statut:"declare"}).then((sinistres)=>{if(!actif)return;setNouveauxSinistres(sinistres.length);const ajouts=sinistres.map((sinistre)=>notificationSinistre(sinistre,lues));ajouts.forEach((notification)=>idsNotificationsRef.current.add(notification.id));setNotificationsBackoffice((courantes)=>fusionnerNotifications(courantes,ajouts));}).catch(()=>undefined);const flux=apiBackoffice.creerFluxSinistres();const evenementSinistre=(evenement:Event)=>{if(!actif)return;let donnees:{type?:string;reference?:string}={};try{donnees=JSON.parse((evenement as MessageEvent<string>).data)??{};}catch{donnees={};}setVersionSinistres((version)=>version+1);if(donnees.type==="nouveau_sinistre"){setNouveauxSinistres((total)=>total+1);const reference=donnees.reference??`sinistre-${Date.now()}`;const notification:NotificationBackoffice={id:`sinistre:${reference}`,type:"sinistre",titre:"Nouveau sinistre déclaré",message:"Un client vient de transmettre une nouvelle déclaration de sinistre.",date:new Date().toISOString(),reference,lue:false};if(!idsNotificationsRef.current.has(notification.id)){idsNotificationsRef.current.add(notification.id);setNotificationsBackoffice((courantes)=>fusionnerNotifications(courantes,[notification]));void jouerAlerteSonore();}toast.info("Un nouveau sinistre vient d’être déclaré.",{action:{label:"Consulter",onClick:()=>ouvrirSinistre(reference)}});}};flux.addEventListener("sinistre",evenementSinistre);return()=>{actif=false;flux.removeEventListener("sinistre",evenementSinistre);flux.close();};},[utilisateurConnecteId]);
 
   useEffect(()=>{const saved=localStorage.getItem(STORAGE_KEY);if(saved){try{setData(JSON.parse(saved));}catch{localStorage.removeItem(STORAGE_KEY)}}setHydrated(true);},[]);
   useEffect(()=>{if(hydrated)localStorage.setItem(STORAGE_KEY,JSON.stringify(data));},[data,hydrated]);
@@ -724,16 +840,20 @@ export function CourtierApp() {
   const resetData=()=>{const fresh=createDemoData();setData(fresh);localStorage.setItem(STORAGE_KEY,JSON.stringify(fresh));window.history.pushState({},"","/");setReferenceDemandeOuverte(null);setReferenceSinistreOuvert(null);setActive("dashboard");toast.success("Données de démonstration réinitialisées");};
 
   if(utilisateurConnecte===undefined)return <main className="auth-loading"><LoaderCircle className="animate-spin"/><span>Vérification de votre session…</span></main>;
-  if(!utilisateurConnecte)return <Login onConnect={setUtilisateurConnecte}/>;
+  if(!utilisateurConnecte)return <Login onConnect={(utilisateur)=>{idsNotificationsRef.current.clear();setNotificationsBackoffice([]);setUtilisateurConnecte(utilisateur);}}/>;
+  const nombreNotificationsNonLues=notificationsBackoffice.filter((notification)=>!notification.lue).length;
+  const marquerNotificationLue=(notificationId:string)=>{const dejaLues=lireNotificationsLues(utilisateurConnecte.id);dejaLues.add(notificationId);sauvegarderNotificationsLues(utilisateurConnecte.id,dejaLues);setNotificationsBackoffice((courantes)=>courantes.map((notification)=>notification.id===notificationId?{...notification,lue:true}:notification));};
+  const marquerToutesNotificationsLues=()=>{const ids=notificationsBackoffice.map((notification)=>notification.id);sauvegarderNotificationsLues(utilisateurConnecte.id,ids);setNotificationsBackoffice((courantes)=>courantes.map((notification)=>({...notification,lue:true})));};
+  const ouvrirNotification=(notification:NotificationBackoffice)=>{marquerNotificationLue(notification.id);if(notification.type==="demande")ouvrirDemande(notification.reference);else ouvrirSinistre(notification.reference);};
   const groupesNavigation=navGroups.filter((groupe)=>groupe.label!=="Administration"||utilisateurConnecte.role==="super_admin");
   const selectionnerModule=(module:ModuleId)=>{if(module==="requests"){ouvrirListeDemandes();return;}if(module==="claims"){ouvrirListeSinistres();return;}if(estVueDemandesUrl()||estVueSinistresUrl())window.history.pushState({},"","/");setReferenceDemandeOuverte(null);setReferenceSinistreOuvert(null);setActive(module);};
   let content:React.ReactNode;
-  if(active==="dashboard")content=<DashboardView utilisateur={utilisateurConnecte} version={versionDemandes+versionSinistres} goTo={selectionnerModule}/>; else if(active==="requests"&&referenceDemandeOuverte)content=<RequestDetailView reference={referenceDemandeOuverte} version={versionDemandes} utilisateur={utilisateurConnecte} onBack={revenirListeDemandes}/>; else if(active==="requests")content=<RequestsView version={versionDemandes} utilisateur={utilisateurConnecte} onOpen={ouvrirDemande}/>; else if(active==="clients")content=<ClientsView utilisateur={utilisateurConnecte} version={versionClients} onSelect={setSelectedClient} onCreate={()=>setClientDialog(true)}/>; else if(active==="opportunities")content=<PipelineView data={data} onChangeStage={updateStage} onSelect={setSelectedOpportunity} onCreate={()=>setOpportunityDialog(true)}/>; else if(active==="proposals")content=<ProposalsView data={data} onSelect={setSelectedProposal} onCreate={()=>setProposalWizard(true)}/>; else if(active==="policies")content=<PoliciesView data={data} onSelect={setSelectedPolicy}/>; else if(["invoices","payments","commissions"].includes(active))content=<FinanceView kind={active as "invoices"|"payments"|"commissions"} data={data} onPayment={()=>setPaymentDialog(true)} onCreateInvoice={createInvoice}/>; else if(active==="renewals")content=<RenewalsView data={data} onPrepare={prepareRenewal}/>; else if(active==="claims"&&referenceSinistreOuvert)content=<ClaimDetailView reference={referenceSinistreOuvert} version={versionSinistres} utilisateur={utilisateurConnecte} onBack={revenirListeSinistres}/>; else if(active==="claims")content=<ClaimsView version={versionSinistres} utilisateur={utilisateurConnecte} onOpen={ouvrirSinistre}/>; else if(active==="reports")content=<ReportsView version={versionDemandes+versionSinistres+versionClients}/>; else content=<GenericView module={active} data={data}/>;
+  if(active==="dashboard")content=<DashboardView utilisateur={utilisateurConnecte} version={versionDemandes+versionSinistres} goTo={selectionnerModule}/>; else if(active==="notifications")content=<NotificationsBackofficeView notifications={notificationsBackoffice} onOpen={ouvrirNotification} onMarkAllRead={marquerToutesNotificationsLues}/>; else if(active==="requests"&&referenceDemandeOuverte)content=<RequestDetailView reference={referenceDemandeOuverte} version={versionDemandes} utilisateur={utilisateurConnecte} onBack={revenirListeDemandes}/>; else if(active==="requests")content=<RequestsView version={versionDemandes} utilisateur={utilisateurConnecte} onOpen={ouvrirDemande}/>; else if(active==="clients")content=<ClientsView utilisateur={utilisateurConnecte} version={versionClients} onSelect={setSelectedClient} onCreate={()=>setClientDialog(true)}/>; else if(active==="opportunities")content=<PipelineView data={data} onChangeStage={updateStage} onSelect={setSelectedOpportunity} onCreate={()=>setOpportunityDialog(true)}/>; else if(active==="proposals")content=<ProposalsView data={data} onSelect={setSelectedProposal} onCreate={()=>setProposalWizard(true)}/>; else if(active==="policies")content=<PoliciesView data={data} onSelect={setSelectedPolicy}/>; else if(["invoices","payments","commissions"].includes(active))content=<FinanceView kind={active as "invoices"|"payments"|"commissions"} data={data} onPayment={()=>setPaymentDialog(true)} onCreateInvoice={createInvoice}/>; else if(active==="renewals")content=<RenewalsView data={data} onPrepare={prepareRenewal}/>; else if(active==="claims"&&referenceSinistreOuvert)content=<ClaimDetailView reference={referenceSinistreOuvert} version={versionSinistres} utilisateur={utilisateurConnecte} onBack={revenirListeSinistres}/>; else if(active==="claims")content=<ClaimsView version={versionSinistres} utilisateur={utilisateurConnecte} onOpen={ouvrirSinistre}/>; else if(active==="reports")content=<ReportsView version={versionDemandes+versionSinistres+versionClients}/>; else content=<GenericView module={active} data={data}/>;
   if(active==="users"&&utilisateurConnecte.role==="super_admin")content=<UsersView utilisateurCourantId={utilisateurConnecte.id}/>;
 
-  const deconnecter=async()=>{try{await apiBackoffice.deconnecter();}catch{}finally{oublierSession();window.history.pushState({},"","/");setReferenceDemandeOuverte(null);setReferenceSinistreOuvert(null);setUtilisateurConnecte(null);setActive("dashboard");}};
+  const deconnecter=async()=>{try{await apiBackoffice.deconnecter();}catch{}finally{oublierSession();idsNotificationsRef.current.clear();setNotificationsBackoffice([]);window.history.pushState({},"","/");setReferenceDemandeOuverte(null);setReferenceSinistreOuvert(null);setUtilisateurConnecte(null);setActive("dashboard");}};
 
-  return <SidebarProvider><Sidebar collapsible="icon" className="border-r-0 bg-[#10294b] text-white"><SidebarHeader className="border-b border-white/10 px-4 py-5"><div className="flex items-center gap-3 overflow-hidden"><div className="brand-mark brand-mark--sidebar">GC</div><div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-semibold">Gestion du courtage</p><p className="truncate text-xs text-blue-200">Espace interne</p></div></div></SidebarHeader><SidebarContent className="px-2 py-3">{groupesNavigation.map((group)=><SidebarGroup key={group.label||"main"} className="py-1"><SidebarGroupLabel className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-blue-300">{group.label}</SidebarGroupLabel><SidebarGroupContent><SidebarMenu>{group.items.map((item)=><NavItem key={item.id} item={item} current={active} onSelect={selectionnerModule} notification={item.id==="requests"?nouvellesDemandes:item.id==="claims"?nouveauxSinistres:0}/>)}</SidebarMenu></SidebarGroupContent></SidebarGroup>)}</SidebarContent><SidebarFooter className="border-t border-white/10 p-3"><div className="flex items-center gap-3 rounded-xl bg-white/8 p-2"><div className="avatar">{utilisateurConnecte.nom_complet.split(" ").map((partie)=>partie[0]).join("").slice(0,2)}</div><div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-medium">{utilisateurConnecte.nom_complet}</p><p className="truncate text-xs text-blue-200">{libellesRoles[utilisateurConnecte.role]}</p></div></div></SidebarFooter></Sidebar><SidebarInset className="min-w-0 bg-[#f4f7fb]"><header className="app-topbar"><div className="flex min-w-0 items-center gap-3"><SidebarTrigger aria-label="Ouvrir le menu"/><div className="mobile-title">{moduleLabels[active]}</div><div className="topbar-search"><Search/><input aria-label="Recherche globale" placeholder="Rechercher un client, une police…"/></div></div><div className="flex items-center gap-2"><Button className="notification-button" size="icon" variant="ghost" aria-label="Notifications" onClick={()=>selectionnerModule(nouveauxSinistres>0?"claims":"requests")}><Bell/>{nouvellesDemandes+nouveauxSinistres>0&&<span>{nouvellesDemandes+nouveauxSinistres>99?"99+":nouvellesDemandes+nouveauxSinistres}</span>}</Button><Button onClick={()=>{selectionnerModule("opportunities");setOpportunityDialog(true)}}><Plus/>Nouvelle affaire</Button><AlertDialog><AlertDialogTrigger asChild><Button size="icon" variant="ghost" aria-label="Réinitialiser les données"><RefreshCcw/></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Réinitialiser la démonstration ?</AlertDialogTitle><AlertDialogDescription>Toutes les modifications locales seront remplacées par les données fictives initiales.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction onClick={resetData}>Réinitialiser</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog><Button size="icon" variant="ghost" aria-label="Se déconnecter" onClick={()=>void deconnecter()}><LogOut/></Button></div></header><main className="dashboard-wrap app-content">{content}</main></SidebarInset>
+  return <SidebarProvider><Sidebar collapsible="icon" className="border-r-0 bg-[#10294b] text-white"><SidebarHeader className="border-b border-white/10 px-4 py-5"><div className="flex items-center gap-3 overflow-hidden"><div className="brand-mark brand-mark--sidebar">GC</div><div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-semibold">Gestion du courtage</p><p className="truncate text-xs text-blue-200">Espace interne</p></div></div></SidebarHeader><SidebarContent className="px-2 py-3">{groupesNavigation.map((group)=><SidebarGroup key={group.label||"main"} className="py-1"><SidebarGroupLabel className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-blue-300">{group.label}</SidebarGroupLabel><SidebarGroupContent><SidebarMenu>{group.items.map((item)=><NavItem key={item.id} item={item} current={active} onSelect={selectionnerModule} notification={item.id==="notifications"?nombreNotificationsNonLues:item.id==="requests"?nouvellesDemandes:item.id==="claims"?nouveauxSinistres:0}/>)}</SidebarMenu></SidebarGroupContent></SidebarGroup>)}</SidebarContent><SidebarFooter className="border-t border-white/10 p-3"><div className="flex items-center gap-3 rounded-xl bg-white/8 p-2"><div className="avatar">{utilisateurConnecte.nom_complet.split(" ").map((partie)=>partie[0]).join("").slice(0,2)}</div><div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-medium">{utilisateurConnecte.nom_complet}</p><p className="truncate text-xs text-blue-200">{libellesRoles[utilisateurConnecte.role]}</p></div></div></SidebarFooter></Sidebar><SidebarInset className="min-w-0 bg-[#f4f7fb]"><header className="app-topbar"><div className="flex min-w-0 items-center gap-3"><SidebarTrigger aria-label="Ouvrir le menu"/><div className="mobile-title">{moduleLabels[active]}</div><div className="topbar-search"><Search/><input aria-label="Recherche globale" placeholder="Rechercher un client, une police…"/></div></div><div className="flex items-center gap-2"><NotificationsBackofficePopover notifications={notificationsBackoffice} onOpen={ouvrirNotification} onShowAll={()=>selectionnerModule("notifications")}/><Button onClick={()=>{selectionnerModule("opportunities");setOpportunityDialog(true)}}><Plus/>Nouvelle affaire</Button><AlertDialog><AlertDialogTrigger asChild><Button size="icon" variant="ghost" aria-label="Réinitialiser les données"><RefreshCcw/></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Réinitialiser la démonstration ?</AlertDialogTitle><AlertDialogDescription>Toutes les modifications locales seront remplacées par les données fictives initiales.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction onClick={resetData}>Réinitialiser</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog><Button className="topbar-logout" size="icon" variant="ghost" aria-label="Se déconnecter" onClick={()=>void deconnecter()}><LogOut/></Button></div></header><main className="dashboard-wrap app-content">{content}</main></SidebarInset>
     <ClientSheet client={selectedClient} onClose={()=>setSelectedClient(null)}/><PolicySheet policy={selectedPolicy} data={data} onClose={()=>setSelectedPolicy(null)}/><ProposalDialog proposal={selectedProposal} data={data} onClose={()=>setSelectedProposal(null)} onRecommend={recommendOffer} onAddOffer={addOffer} onConvert={convertProposal}/><OpportunityDialog opportunity={selectedOpportunity} data={data} onClose={()=>setSelectedOpportunity(null)} onStage={(stage)=>selectedOpportunity&&updateStage(selectedOpportunity.id,stage)}/><ClaimDialog claim={selectedClaim} data={data} onClose={()=>setSelectedClaim(null)} onStatus={(status)=>selectedClaim&&updateClaim(selectedClaim.id,status)}/>{utilisateurConnecte.role==="super_admin"&&<CreateClientDialog open={clientDialog} onClose={()=>setClientDialog(false)} onCreate={createClient}/>}<CreateOpportunityDialog open={opportunityDialog} data={data} onClose={()=>setOpportunityDialog(false)} onCreate={createOpportunity}/><ProposalWizard open={proposalWizard} data={data} onClose={()=>setProposalWizard(false)} onCreate={createProposal}/><PaymentDialog open={paymentDialog} data={data} onClose={()=>setPaymentDialog(false)} onCreate={createPayment}/><Toaster richColors position="bottom-right"/>
   </SidebarProvider>;
 }
