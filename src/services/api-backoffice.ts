@@ -47,8 +47,9 @@ export type IntervenantDemande = {
 export type ResumeDemandeClient = {
   id: string;
   reference: string;
-  produit: "automobile";
-  sous_type: "voiture" | "moto_deux_trois_roues";
+  produit: string;
+  libelle_produit: string;
+  sous_type: "voiture" | "moto_deux_trois_roues" | null;
   mode_preparation: "saisie_directe" | "delegation_courtier";
   statut: StatutDemande;
   responsable: IntervenantDemande | null;
@@ -65,6 +66,60 @@ export type ResumeDemandeClient = {
 
 export type DetailDemandeClient = ResumeDemandeClient & {
   donnees: Record<string, unknown>;
+};
+
+export type OffreAssuranceBackoffice = {
+  id: string;
+  reference: string;
+  demande_reference: string;
+  produit: string;
+  libelle_produit: string;
+  assureur: string;
+  prime_xaf: number;
+  duree_mois: number;
+  date_effet: string;
+  franchise_xaf: number;
+  garanties: string[];
+  options: string[];
+  exclusions: string[];
+  documents_requis: string[];
+  recommandee: boolean;
+  conseil: string;
+  selectionnee: boolean;
+  cree_le: string;
+};
+
+export type PaiementCampayBackoffice = {
+  id: string;
+  reference: string;
+  reference_externe: string;
+  demande_reference: string;
+  offre_id: string;
+  montant_xaf: number;
+  numero_telephone: string;
+  statut: "initialisation" | "en_attente" | "reussi" | "echoue" | "a_verifier";
+  operateur: string | null;
+  code_ussd: string | null;
+  contrat_reference: string | null;
+  cree_le: string;
+  modifie_le: string;
+};
+
+export type ContratAssuranceBackoffice = {
+  id: string;
+  reference: string;
+  numero_police: string | null;
+  demande_reference: string;
+  paiement_id: string;
+  produit: string;
+  libelle_produit: string;
+  assureur: string;
+  prime_xaf: number;
+  statut: "en_preparation" | "actif" | "expire";
+  date_effet: string;
+  date_expiration: string;
+  garanties: string[];
+  cree_le: string;
 };
 
 export type StatutSinistre =
@@ -340,6 +395,53 @@ export const apiBackoffice = {
   obtenirDemande(reference: string) {
     return appeler<DetailDemandeClient>(
       `/backoffice/demandes-clients/${encodeURIComponent(reference)}`,
+    );
+  },
+
+  listerOffresDemande(reference: string) {
+    return appeler<OffreAssuranceBackoffice[]>(
+      `/backoffice/demandes-clients/${encodeURIComponent(reference)}/offres`,
+    );
+  },
+
+  creerOffreDemande(reference: string, entree: {
+    assureur: string;
+    prime_xaf: number;
+    duree_mois: number;
+    date_effet: string;
+    franchise_xaf: number;
+    garanties: string[];
+    options: string[];
+    exclusions: string[];
+    documents_requis: string[];
+    recommandee: boolean;
+    conseil: string;
+  }) {
+    return appeler<OffreAssuranceBackoffice>(
+      `/backoffice/demandes-clients/${encodeURIComponent(reference)}/offres`,
+      { method: "POST", body: JSON.stringify(entree) },
+    );
+  },
+
+  listerPaiementsReels() {
+    return appeler<PaiementCampayBackoffice[]>("/backoffice/souscriptions/paiements");
+  },
+
+  rapprocherPaiement(paiementId: string, referenceCampay: string) {
+    return appeler<PaiementCampayBackoffice>(
+      `/backoffice/souscriptions/paiements/${encodeURIComponent(paiementId)}/rapprochement`,
+      { method: "POST", body: JSON.stringify({ reference_campay: referenceCampay }) },
+    );
+  },
+
+  listerContratsReels() {
+    return appeler<ContratAssuranceBackoffice[]>("/backoffice/souscriptions/contrats");
+  },
+
+  activerContrat(contratId: string, numeroPolice: string) {
+    return appeler<ContratAssuranceBackoffice>(
+      `/backoffice/souscriptions/contrats/${encodeURIComponent(contratId)}/activation`,
+      { method: "POST", body: JSON.stringify({ numero_police: numeroPolice }) },
     );
   },
 
