@@ -70,6 +70,7 @@ export type DetailDemandeClient = ResumeDemandeClient & {
 
 export type OffreAssuranceBackoffice = {
   id: string;
+  compagnie_id: string | null;
   reference: string;
   demande_reference: string;
   produit: string;
@@ -87,6 +88,90 @@ export type OffreAssuranceBackoffice = {
   conseil: string;
   selectionnee: boolean;
   cree_le: string;
+};
+
+export type CompagniePartenaireResume = {
+  id: string;
+  code: string;
+  nom: string;
+  sigle: string;
+  statut: string;
+  logo_url: string | null;
+  nombre_baremes: number;
+  nombre_offres: number;
+  nombre_contrats: number;
+  nombre_sinistres: number;
+};
+
+export type DetailCompagniePartenaire = CompagniePartenaireResume & {
+  logo_modifie_le: string | null;
+  baremes: Array<{
+    id: string;
+    code: string;
+    produit: string;
+    libelle: string;
+    partenaire: string | null;
+    statut: string;
+    date_signature_document: string | null;
+    valide_du: string | null;
+    valide_au: string | null;
+    nombre_regles: number;
+    nombre_franchises: number;
+    nombre_reductions: number;
+    nombre_formules: number;
+  }>;
+  garanties_tarifaires: Array<{
+    categorie: number;
+    garantie_code: string;
+    garantie_libelle: string;
+    type_regle: string;
+    taux_pourcent: string | null;
+    montant_min_xaf: number | null;
+    montant_max_xaf: number | null;
+    assiette: string | null;
+    note: string;
+  }>;
+  offres: Array<{
+    id: string;
+    reference: string;
+    demande_reference: string;
+    produit: string;
+    prime_xaf: number;
+    recommandee: boolean;
+    selectionnee: boolean;
+    cree_le: string;
+  }>;
+  contrats: Array<{
+    id: string;
+    reference: string;
+    numero_police: string | null;
+    demande_reference: string;
+    produit: string;
+    prime_xaf: number;
+    statut: string;
+    date_effet: string;
+    date_expiration: string;
+    cree_le: string;
+  }>;
+  paiements: Array<{
+    id: string;
+    reference: string;
+    demande_reference: string;
+    montant_xaf: number;
+    statut: string;
+    operateur: string | null;
+    cree_le: string;
+  }>;
+  sinistres: Array<{
+    id: string;
+    reference: string;
+    contrat_reference: string;
+    produit: string;
+    type_sinistre: string;
+    date_sinistre: string;
+    statut: string;
+    cree_le: string;
+  }>;
 };
 
 export type PaiementCampayBackoffice = {
@@ -254,7 +339,8 @@ export function oublierSession() {
 
 async function appeler<T>(chemin: string, options: RequestInit = {}): Promise<T> {
   const entetes = new Headers(options.headers);
-  if (options.body) entetes.set("Content-Type", "application/json");
+  const estFormulaire = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (options.body && !estFormulaire) entetes.set("Content-Type", "application/json");
   const csrf = obtenirJetonCsrf();
   if (csrf) entetes.set("X-CSRF-Token", csrf);
   const reponse = await fetch(`${URL_API}${chemin}`, {
@@ -283,6 +369,25 @@ export const apiBackoffice = {
 
   obtenirRapportActivite() {
     return appeler<RapportActiviteBackoffice>("/backoffice/rapports");
+  },
+
+  listerPartenaires() {
+    return appeler<CompagniePartenaireResume[]>("/backoffice/partenaires");
+  },
+
+  obtenirPartenaire(compagnieId: string) {
+    return appeler<DetailCompagniePartenaire>(
+      `/backoffice/partenaires/${encodeURIComponent(compagnieId)}`,
+    );
+  },
+
+  modifierLogoPartenaire(compagnieId: string, fichier: File) {
+    const formulaire = new FormData();
+    formulaire.append("fichier", fichier);
+    return appeler<DetailCompagniePartenaire>(
+      `/backoffice/partenaires/${encodeURIComponent(compagnieId)}/logo`,
+      { method: "PUT", body: formulaire },
+    );
   },
 
   connecter(adresse_email: string, mot_de_passe: string) {
@@ -405,7 +510,7 @@ export const apiBackoffice = {
   },
 
   creerOffreDemande(reference: string, entree: {
-    assureur: string;
+    compagnie_id: string;
     prime_xaf: number;
     duree_mois: number;
     date_effet: string;
