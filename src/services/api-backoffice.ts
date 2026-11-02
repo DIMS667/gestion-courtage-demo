@@ -115,10 +115,14 @@ export type DetailCompagniePartenaire = CompagniePartenaireResume & {
     date_signature_document: string | null;
     valide_du: string | null;
     valide_au: string | null;
+    paiement_autorise: boolean;
+    raison_suspension: string;
     nombre_regles: number;
     nombre_franchises: number;
     nombre_reductions: number;
     nombre_formules: number;
+    nombre_tarifs: number;
+    nombre_prestations: number;
   }>;
   garanties_tarifaires: Array<{
     categorie: number;
@@ -129,6 +133,54 @@ export type DetailCompagniePartenaire = CompagniePartenaireResume & {
     montant_min_xaf: number | null;
     montant_max_xaf: number | null;
     assiette: string | null;
+    note: string;
+  }>;
+  formules_sante: Array<{
+    id: string;
+    bareme_code: string;
+    code: string;
+    libelle: string;
+    zone_couverture: string;
+    reseau_soins: string;
+    plafond_couverture_xaf: number;
+    plafond_alternatif_xaf: number | null;
+    plafond_note: string;
+    responsabilite_civile_note: string;
+    capital_assure_xaf: number;
+    capital_conjoint_xaf: number;
+    capital_enfant_xaf: number;
+    assistance_xaf: number | null;
+  }>;
+  tarifs_sante: Array<{
+    formule_code: string;
+    formule_libelle: string;
+    beneficiaire: string;
+    prime_maladie_xaf: number;
+    frais_funeraires_xaf: number;
+    accessoires_xaf: number;
+    tva_xaf: number;
+    carte_biometrique_xaf: number;
+    responsabilite_civile_xaf: number | null;
+    assistance_xaf: number | null;
+    prime_ttc_imprimee_xaf: number;
+    ambiguite: boolean;
+    note: string;
+  }>;
+  prestations_sante: Array<{
+    formule_code: string;
+    formule_libelle: string;
+    code: string;
+    libelle: string;
+    montant_xaf: number | null;
+    unite: string;
+    taux_pourcent: string | null;
+    note: string;
+  }>;
+  regles_age_sante: Array<{
+    age_min: number;
+    age_max: number | null;
+    majoration_pourcent: string | null;
+    exclu: boolean;
     note: string;
   }>;
   offres: Array<{

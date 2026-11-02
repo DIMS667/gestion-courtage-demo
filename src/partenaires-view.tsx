@@ -228,11 +228,19 @@ function DetailPartenaire({
                   <div><dt className="text-slate-500">Document signé</dt><dd className="font-medium">{afficherDate(bareme.date_signature_document)}</dd></div>
                   <div><dt className="text-slate-500">Période de validité</dt><dd className="font-medium">{bareme.valide_du ? `${afficherDate(bareme.valide_du)} — ${afficherDate(bareme.valide_au)}` : "Non indiquée"}</dd></div>
                 </dl>
-                <div className="mt-4 grid grid-cols-2 gap-2 border-t pt-4 text-sm sm:grid-cols-4">
+                {!bareme.paiement_autorise && bareme.raison_suspension && (
+                  <div className="mt-4 flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                    <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span><strong>Paiement suspendu :</strong> {bareme.raison_suspension}</span>
+                  </div>
+                )}
+                <div className="mt-4 grid grid-cols-2 gap-2 border-t pt-4 text-sm sm:grid-cols-3 lg:grid-cols-6">
                   <span><strong>{bareme.nombre_regles}</strong> règles</span>
                   <span><strong>{bareme.nombre_franchises}</strong> franchises</span>
                   <span><strong>{bareme.nombre_reductions}</strong> réductions</span>
                   <span><strong>{bareme.nombre_formules}</strong> formules</span>
+                  <span><strong>{bareme.nombre_tarifs}</strong> tarifs</span>
+                  <span><strong>{bareme.nombre_prestations}</strong> prestations</span>
                 </div>
               </CardContent>
             </Card>
@@ -255,6 +263,99 @@ function DetailPartenaire({
                       </TableRow>
                     ))}</TableBody>
                   </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {compagnie.formules_sante.length > 0 && (
+            <Card className="border-slate-200 shadow-sm">
+              <CardContent className="p-5">
+                <div className="mb-4">
+                  <h2 className="font-semibold text-[#10294b]">Formules santé B-CARE</h2>
+                  <p className="text-sm text-slate-500">Couvertures rattachées exclusivement à PRUDENTIAL BENEFICIAL.</p>
+                </div>
+                <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
+                  {compagnie.formules_sante.map((formule) => (
+                    <div key={formule.id} className="rounded-xl border border-slate-200 p-4">
+                      <h3 className="font-semibold text-[#10294b]">{formule.libelle}</h3>
+                      <p className="mt-2 text-sm"><span className="text-slate-500">Zone :</span> {formule.zone_couverture}</p>
+                      <p className="mt-1 text-sm"><span className="text-slate-500">Réseau :</span> {formule.reseau_soins}</p>
+                      <p className="mt-1 text-sm"><span className="text-slate-500">Plafond :</span> {money.format(formule.plafond_couverture_xaf)}{formule.plafond_alternatif_xaf ? ` / ${money.format(formule.plafond_alternatif_xaf)}` : ""}</p>
+                      <div className="mt-3 border-t pt-3 text-xs text-slate-600">
+                        <p>Capitaux décès : assuré {money.format(formule.capital_assure_xaf)}, conjoint {money.format(formule.capital_conjoint_xaf)}, enfant {money.format(formule.capital_enfant_xaf)}</p>
+                        <p className="mt-1">RC chef de famille : {formule.responsabilite_civile_note}</p>
+                        {formule.plafond_note && <p className="mt-2 text-amber-700">{formule.plafond_note}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {compagnie.tarifs_sante.length > 0 && (
+            <Card className="overflow-hidden border-slate-200 shadow-sm">
+              <CardContent className="p-0">
+                <div className="border-b p-5">
+                  <h2 className="font-semibold text-[#10294b]">Primes annuelles TTC B-CARE</h2>
+                  <p className="text-sm text-slate-500">Les PTTC sont repris tels qu’imprimés dans le document source.</p>
+                </div>
+                <div className="overflow-auto">
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Formule</TableHead><TableHead>Bénéficiaire</TableHead><TableHead>Maladie</TableHead><TableHead>Frais funéraires</TableHead><TableHead>TVA</TableHead><TableHead>Carte</TableHead><TableHead>RC</TableHead><TableHead>Assistance</TableHead><TableHead>PTTC imprimé</TableHead><TableHead>État</TableHead></TableRow></TableHeader>
+                    <TableBody>{compagnie.tarifs_sante.map((tarif) => (
+                      <TableRow key={`${tarif.formule_code}-${tarif.beneficiaire}`}>
+                        <TableCell className="font-medium">{tarif.formule_libelle}</TableCell>
+                        <TableCell>{libelleStatut(tarif.beneficiaire)}</TableCell>
+                        <TableCell>{money.format(tarif.prime_maladie_xaf)}</TableCell>
+                        <TableCell>{money.format(tarif.frais_funeraires_xaf)}</TableCell>
+                        <TableCell>{money.format(tarif.tva_xaf)}</TableCell>
+                        <TableCell>{money.format(tarif.carte_biometrique_xaf)}</TableCell>
+                        <TableCell>{tarif.responsabilite_civile_xaf === null ? "—" : money.format(tarif.responsabilite_civile_xaf)}</TableCell>
+                        <TableCell>{tarif.assistance_xaf === null ? "Exclue" : money.format(tarif.assistance_xaf)}</TableCell>
+                        <TableCell className="font-semibold">{money.format(tarif.prime_ttc_imprimee_xaf)}</TableCell>
+                        <TableCell>{tarif.ambiguite ? <Badge className="border-amber-300 bg-amber-50 text-amber-800" variant="outline">Ambigu</Badge> : <Badge variant="outline">Imprimé</Badge>}</TableCell>
+                      </TableRow>
+                    ))}</TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {compagnie.prestations_sante.length > 0 && (
+            <Card className="overflow-hidden border-slate-200 shadow-sm">
+              <CardContent className="p-0">
+                <div className="border-b p-5"><h2 className="font-semibold text-[#10294b]">Prestations B-CARE</h2></div>
+                <div className="overflow-auto">
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Formule</TableHead><TableHead>Prestation</TableHead><TableHead>Couverture</TableHead></TableRow></TableHeader>
+                    <TableBody>{compagnie.prestations_sante.map((prestation) => (
+                      <TableRow key={`${prestation.formule_code}-${prestation.code}`}>
+                        <TableCell className="font-medium">{prestation.formule_libelle}</TableCell>
+                        <TableCell>{prestation.libelle}</TableCell>
+                        <TableCell>{prestation.taux_pourcent !== null ? `${Number(prestation.taux_pourcent)} %` : prestation.montant_xaf !== null ? `${money.format(prestation.montant_xaf)}${prestation.unite === "par_jour" ? " / jour" : ""}` : prestation.note || libelleStatut(prestation.unite)}</TableCell>
+                      </TableRow>
+                    ))}</TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {compagnie.regles_age_sante.length > 0 && (
+            <Card className="border-slate-200 shadow-sm">
+              <CardContent className="p-5">
+                <h2 className="font-semibold text-[#10294b]">Règles d’âge B-CARE</h2>
+                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {compagnie.regles_age_sante.map((regle) => (
+                    <div key={regle.age_min} className="rounded-xl border p-3 text-sm">
+                      <p className="font-medium">{regle.age_max === null ? `${regle.age_min} ans et plus` : `${regle.age_min} à ${regle.age_max} ans`}</p>
+                      <p className={`mt-1 ${regle.exclu ? "text-red-700" : "text-slate-600"}`}>{regle.exclu ? "Exclu" : regle.majoration_pourcent && Number(regle.majoration_pourcent) > 0 ? `Majoration de ${Number(regle.majoration_pourcent)} %` : "Tarif normal"}</p>
+                      {regle.note && <p className="mt-2 text-xs text-slate-500">{regle.note}</p>}
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
