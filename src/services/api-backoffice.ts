@@ -71,6 +71,10 @@ export type DetailDemandeClient = ResumeDemandeClient & {
 export type OffreAssuranceBackoffice = {
   id: string;
   compagnie_id: string | null;
+  origine: "manuelle" | "automatique";
+  bareme_id: string | null;
+  formule_tarifaire_code: string | null;
+  detail_calcul: Record<string, unknown>;
   reference: string;
   demande_reference: string;
   produit: string;
@@ -188,6 +192,8 @@ export type DetailCompagniePartenaire = CompagniePartenaireResume & {
     reference: string;
     demande_reference: string;
     produit: string;
+    origine: "manuelle" | "automatique";
+    formule_tarifaire_code: string | null;
     prime_xaf: number;
     recommandee: boolean;
     selectionnee: boolean;
