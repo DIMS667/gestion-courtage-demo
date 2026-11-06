@@ -583,10 +583,43 @@ const lignesDetailCalcul = (detail: Record<string, unknown>) =>
     return typeof valeur === "number" ? [{ cle, libelle, valeur }] : [];
   });
 
+const lireListeObjetsCalcul = (detail: Record<string, unknown>, cle: string) => {
+  const valeur = detail[cle];
+  return Array.isArray(valeur)
+    ? valeur.filter((element): element is Record<string, unknown> => Boolean(element) && typeof element === "object" && !Array.isArray(element))
+    : [];
+};
+
+const lireNombreCalcul = (ligne: Record<string, unknown>, cle: string) => {
+  const valeur = ligne[cle];
+  return typeof valeur === "number" ? valeur : null;
+};
+
+const libellesBeneficiaires: Record<string, string> = {
+  assure_principal: "Assuré principal",
+  conjoint: "Conjoint",
+  enfant: "Enfant",
+};
+
+const composantesBcare = [
+  ["prime_maladie_xaf", "Prime maladie"],
+  ["frais_funeraires_xaf", "Frais funéraires"],
+  ["accessoires_xaf", "Accessoires"],
+  ["responsabilite_civile_xaf", "Responsabilité civile"],
+  ["assistance_xaf", "Assistance"],
+  ["carte_biometrique_xaf", "Carte biométrique"],
+  ["tva_xaf", "TVA du tarif"],
+  ["prime_ttc_imprimee_xaf", "Prime TTC du document"],
+  ["majoration_prime_nette_xaf", "Majoration liée à l’âge"],
+  ["tva_majoration_xaf", "TVA sur la majoration"],
+] as const;
+
 function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSelectionEnvoi }: { offre: OffreAssuranceBackoffice; peutTransmettre:boolean; selectionneePourEnvoi: boolean; onSelectionEnvoi: (offreId:string, selectionnee:boolean)=>void }) {
   const automatique = offre.origine === "automatique";
   const brouillonAutomatique = automatique && !offre.transmise;
   const lignesCalcul = lignesDetailCalcul(offre.detail_calcul);
+  const garantiesTarifees = lireListeObjetsCalcul(offre.detail_calcul, "garanties_detail");
+  const beneficiairesBcare = lireListeObjetsCalcul(offre.detail_calcul, "beneficiaires");
   const bareme = lireTexteCalcul(offre.detail_calcul, "bareme_code") ?? offre.bareme_id;
   const moteur = lireTexteCalcul(offre.detail_calcul, "moteur");
 
@@ -645,6 +678,39 @@ function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSe
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {automatique && garantiesTarifees.length > 0 && (
+          <div className="overflow-hidden rounded-lg border border-blue-100 bg-white">
+            <div className="border-b border-blue-100 px-3 py-3">
+              <strong className="text-sm">Prix des garanties sélectionnées</strong>
+              <p className="mt-1 text-xs text-muted-foreground">Les montants ci-dessous composent la ligne « Garanties choisies ».</p>
+            </div>
+            <div className="divide-y">
+              {garantiesTarifees.map((garantie,index) => {
+                const libelle=typeof garantie.libelle==="string"?garantie.libelle:`Garantie ${index+1}`;
+                const type=garantie.type==="obligatoire_incluse"?"Obligatoire · incluse":"Optionnelle";
+                const montant=lireNombreCalcul(garantie,"montant_xaf")??0;
+                const note=typeof garantie.note==="string"?garantie.note:"";
+                return <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 px-3 py-3 text-sm" key={`${String(garantie.code??libelle)}-${index}`}><div><strong className="block">{libelle}</strong><span className="text-xs text-muted-foreground">{type}{note?` · ${note}`:""}</span></div><strong className="whitespace-nowrap text-right">{money.format(montant)}</strong></div>;
+              })}
+            </div>
+          </div>
+        )}
+
+        {automatique && beneficiairesBcare.length > 0 && (
+          <div className="space-y-3 rounded-lg border border-blue-100 bg-white p-3">
+            <div>
+              <strong className="text-sm">Décomposition tarifaire B‑CARE</strong>
+              <p className="mt-1 text-xs text-muted-foreground">Composantes indiquées par l’assurance pour chaque bénéficiaire.</p>
+            </div>
+            {beneficiairesBcare.map((beneficiaire,index) => {
+              const code=typeof beneficiaire.beneficiaire==="string"?beneficiaire.beneficiaire:"beneficiaire";
+              const age=lireNombreCalcul(beneficiaire,"age");
+              const primeFinale=lireNombreCalcul(beneficiaire,"prime_ttc_xaf");
+              return <div className="overflow-hidden rounded-lg border" key={`${code}-${index}`}><div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 px-3 py-3"><div><strong className="block text-sm">{libellesBeneficiaires[code]??libelleCode(code)}</strong>{age!==null&&<span className="text-xs text-muted-foreground">{age} ans</span>}</div>{primeFinale!==null&&<div className="text-right"><span className="block text-xs text-muted-foreground">Prime finale</span><strong>{money.format(primeFinale)}</strong></div>}</div><div className="grid gap-px bg-border sm:grid-cols-2">{composantesBcare.flatMap(([cle,libelle])=>{const montant=lireNombreCalcul(beneficiaire,cle);return montant===null?[]:[<div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 bg-white px-3 py-2 text-sm" key={cle}><span className="text-muted-foreground">{libelle}</span><strong className="whitespace-nowrap">{money.format(montant)}</strong></div>];})}</div></div>;
+            })}
           </div>
         )}
 
