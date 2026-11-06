@@ -90,6 +90,8 @@ export type OffreAssuranceBackoffice = {
   documents_requis: string[];
   recommandee: boolean;
   conseil: string;
+  transmise: boolean;
+  publiee_le: string | null;
   selectionnee: boolean;
   cree_le: string;
 };
@@ -196,6 +198,7 @@ export type DetailCompagniePartenaire = CompagniePartenaireResume & {
     formule_tarifaire_code: string | null;
     prime_xaf: number;
     recommandee: boolean;
+    transmise: boolean;
     selectionnee: boolean;
     cree_le: string;
   }>;
@@ -583,6 +586,13 @@ export const apiBackoffice = {
     return appeler<OffreAssuranceBackoffice>(
       `/backoffice/demandes-clients/${encodeURIComponent(reference)}/offres`,
       { method: "POST", body: JSON.stringify(entree) },
+    );
+  },
+
+  transmettreOffresDemande(reference: string, offreIds: string[]) {
+    return appeler<OffreAssuranceBackoffice[]>(
+      `/backoffice/demandes-clients/${encodeURIComponent(reference)}/offres/transmission`,
+      { method: "POST", body: JSON.stringify({ offre_ids: offreIds }) },
     );
   },
 

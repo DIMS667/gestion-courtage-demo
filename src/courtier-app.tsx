@@ -583,14 +583,15 @@ const lignesDetailCalcul = (detail: Record<string, unknown>) =>
     return typeof valeur === "number" ? [{ cle, libelle, valeur }] : [];
   });
 
-function CarteOffreDemande({ offre }: { offre: OffreAssuranceBackoffice }) {
+function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSelectionEnvoi }: { offre: OffreAssuranceBackoffice; peutTransmettre:boolean; selectionneePourEnvoi: boolean; onSelectionEnvoi: (offreId:string, selectionnee:boolean)=>void }) {
   const automatique = offre.origine === "automatique";
+  const brouillonAutomatique = automatique && !offre.transmise;
   const lignesCalcul = lignesDetailCalcul(offre.detail_calcul);
   const bareme = lireTexteCalcul(offre.detail_calcul, "bareme_code") ?? offre.bareme_id;
   const moteur = lireTexteCalcul(offre.detail_calcul, "moteur");
 
   return (
-    <article className={`overflow-hidden rounded-xl border ${automatique ? "border-blue-200 bg-blue-50/30" : "bg-background"}`}>
+    <article className={`overflow-hidden rounded-xl border ${brouillonAutomatique ? "border-amber-300 bg-amber-50/40" : automatique ? "border-blue-200 bg-blue-50/30" : "bg-background"}`}>
       <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -600,6 +601,7 @@ function CarteOffreDemande({ offre }: { offre: OffreAssuranceBackoffice }) {
               {automatique ? "Générée automatiquement" : "Ajoutée manuellement"}
             </Badge>
             {offre.recommandee && !offre.selectionnee && <Badge variant="secondary">Recommandée</Badge>}
+            {brouillonAutomatique && <Badge className="border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-100" variant="outline">Non visible par le client</Badge>}
           </div>
           <p className="text-sm text-muted-foreground">{offre.reference} · {offre.libelle_produit}</p>
           {automatique && (
@@ -610,7 +612,15 @@ function CarteOffreDemande({ offre }: { offre: OffreAssuranceBackoffice }) {
             </div>
           )}
         </div>
-        <StatusBadge value={offre.selectionnee ? "Sélectionnée" : "Disponible"} />
+        <div className="flex flex-col items-start gap-2 sm:items-end">
+          <StatusBadge value={offre.selectionnee ? "Sélectionnée" : offre.transmise ? "Envoyée au client" : "Brouillon"} />
+          {brouillonAutomatique && peutTransmettre && (
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium shadow-sm">
+              <input type="checkbox" checked={selectionneePourEnvoi} onChange={(event)=>onSelectionEnvoi(offre.id,event.target.checked)} />
+              Sélectionner pour l’envoi
+            </label>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-px border-y bg-border sm:grid-cols-4">
@@ -667,12 +677,24 @@ function OffresDemandePanel({ reference, peutCreer, version, onActualiserDemande
   const [chargement,setChargement]=useState(true);
   const [ouvert,setOuvert]=useState(false);
   const [enregistrement,setEnregistrement]=useState(false);
+  const [selectionEnvoi,setSelectionEnvoi]=useState<string[]>([]);
+  const [transmission,setTransmission]=useState(false);
   const [formulaire,setFormulaire]=useState({compagnieId:"",prime:"",duree:"12",dateEffet:"",franchise:"0",garanties:"",options:"",exclusions:"",documents:"",recommandee:true,conseil:""});
 
-  const charger=async()=>{try{setOffres(await apiBackoffice.listerOffresDemande(reference));}catch(cause){toast.error(cause instanceof Error?cause.message:"Impossible de charger les offres.");}finally{setChargement(false);}};
-  useEffect(()=>{let actif=true;apiBackoffice.listerOffresDemande(reference).then((liste)=>{if(actif)setOffres(liste);}).catch((cause)=>{if(actif)toast.error(cause instanceof Error?cause.message:"Impossible de charger les offres.");}).finally(()=>{if(actif)setChargement(false);});return()=>{actif=false};},[reference,version]);
+  const charger=async()=>{try{setOffres(await apiBackoffice.listerOffresDemande(reference));setSelectionEnvoi([]);}catch(cause){toast.error(cause instanceof Error?cause.message:"Impossible de charger les offres.");}finally{setChargement(false);}};
+  useEffect(()=>{let actif=true;apiBackoffice.listerOffresDemande(reference).then((liste)=>{if(actif){setOffres(liste);setSelectionEnvoi([]);}}).catch((cause)=>{if(actif)toast.error(cause instanceof Error?cause.message:"Impossible de charger les offres.");}).finally(()=>{if(actif)setChargement(false);});return()=>{actif=false};},[reference,version]);
   useEffect(()=>{let actif=true;apiBackoffice.listerPartenaires().then((liste)=>{if(actif)setCompagnies(liste.filter((compagnie)=>compagnie.statut==="active"));}).catch((cause)=>{if(actif)toast.error(cause instanceof Error?cause.message:"Impossible de charger les compagnies.");});return()=>{actif=false};},[]);
   const modifier=(champ:keyof typeof formulaire,valeur:string|boolean)=>setFormulaire((courant)=>({...courant,[champ]:valeur}));
+  const modifierSelectionEnvoi=(offreId:string,selectionnee:boolean)=>setSelectionEnvoi((courante)=>selectionnee?[...courante,offreId]:courante.filter((id)=>id!==offreId));
+  const transmettre=async()=>{
+    if(!selectionEnvoi.length)return;
+    setTransmission(true);
+    try{
+      await apiBackoffice.transmettreOffresDemande(reference,selectionEnvoi);
+      toast.success(`${selectionEnvoi.length} offre${selectionEnvoi.length>1?"s ont":" a"} été envoyée${selectionEnvoi.length>1?"s":""} au client.`);
+      await Promise.all([charger(),onActualiserDemande()]);
+    }catch(cause){toast.error(cause instanceof Error?cause.message:"Les offres n’ont pas pu être envoyées.");}finally{setTransmission(false);}
+  };
   const creer=async()=>{
     setEnregistrement(true);
     try{
@@ -703,7 +725,7 @@ function OffresDemandePanel({ reference, peutCreer, version, onActualiserDemande
   const nombreAutomatiques=offres.filter((offre)=>offre.origine==="automatique").length;
   const nombreManuelles=offres.length-nombreAutomatiques;
 
-  return <Card className="request-page-panel"><CardContent className="p-0"><div className="section-title-row"><div><p className="eyebrow">Offres calculées et manuelles</p><h2>Propositions au client</h2>{!chargement&&offres.length>0&&<p className="mt-1 text-sm text-muted-foreground">{nombreAutomatiques} automatique(s) · {nombreManuelles} manuelle(s)</p>}</div>{peutCreer&&<Button size="sm" onClick={()=>setOuvert(true)}><Plus/>Ajouter manuellement</Button>}</div>{chargement?<div className="dashboard-skeleton" aria-label="Chargement des offres"><div className="skeleton skeleton--panel"/></div>:offres.length?<div className="space-y-4 p-4">{offres.map((offre)=><CarteOffreDemande offre={offre} key={offre.id}/>)}</div>:<div className="request-claim"><div><strong>Aucune offre transmise.</strong><span>Les offres automatiques apparaissent ici lorsqu’un barème complet s’applique. Vous pouvez aussi en ajouter une manuellement.</span></div></div>}
+  return <Card className="request-page-panel"><CardContent className="p-0"><div className="section-title-row"><div><p className="eyebrow">Offres calculées et manuelles</p><h2>Propositions au client</h2>{!chargement&&offres.length>0&&<p className="mt-1 text-sm text-muted-foreground">{nombreAutomatiques} automatique(s) · {nombreManuelles} manuelle(s)</p>}</div><div className="flex flex-wrap gap-2">{selectionEnvoi.length>0&&<Button size="sm" disabled={transmission} onClick={()=>void transmettre()}>{transmission?<LoaderCircle className="animate-spin"/>:<ChevronRight/>}Envoyer {selectionEnvoi.length} offre{selectionEnvoi.length>1?"s":""} au client</Button>}{peutCreer&&<Button size="sm" variant="outline" onClick={()=>setOuvert(true)}><Plus/>Ajouter manuellement</Button>}</div></div>{chargement?<div className="dashboard-skeleton" aria-label="Chargement des offres"><div className="skeleton skeleton--panel"/></div>:offres.length?<div className="space-y-4 p-4">{offres.map((offre)=><CarteOffreDemande offre={offre} key={offre.id} peutTransmettre={peutCreer} selectionneePourEnvoi={selectionEnvoi.includes(offre.id)} onSelectionEnvoi={modifierSelectionEnvoi}/>)}</div>:<div className="request-claim"><div><strong>Aucune offre disponible.</strong><span>Les offres automatiques apparaissent ici en brouillon lorsqu’un barème complet s’applique. Vous pouvez aussi en ajouter une manuellement.</span></div></div>}
     <Dialog open={ouvert} onOpenChange={setOuvert}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>Ajouter une offre réelle</DialogTitle><DialogDescription>Le client verra immédiatement cette offre et pourra la sélectionner avant son paiement CamPay.</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2"><label><Label>Compagnie d’assurance</Label><Select value={formulaire.compagnieId} onValueChange={(valeur)=>modifier("compagnieId",valeur)}><SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner une compagnie"/></SelectTrigger><SelectContent>{compagnies.map((compagnie)=><SelectItem key={compagnie.id} value={compagnie.id}>{compagnie.nom}</SelectItem>)}</SelectContent></Select></label><label><Label>Prime à payer (FCFA)</Label><Input type="number" min={compagnieTest?1:100} max={compagnieTest?24:2_000_000_000} value={formulaire.prime} onChange={(event)=>modifier("prime",event.target.value)} placeholder={compagnieTest?"20":"105000"}/>{compagnieTest&&<small className="mt-1 block text-xs text-muted-foreground">Montant CamPay DEMO : 1 à 24 FCFA.</small>}</label><label><Label>Durée (mois)</Label><Input type="number" min="1" max="120" value={formulaire.duree} onChange={(event)=>modifier("duree",event.target.value)}/></label><label><Label>Date d’effet</Label><Input type="date" value={formulaire.dateEffet} onChange={(event)=>modifier("dateEffet",event.target.value)}/></label><label><Label>Franchise (FCFA)</Label><Input type="number" min="0" value={formulaire.franchise} onChange={(event)=>modifier("franchise",event.target.value)}/></label><label className="flex items-center gap-3 self-end rounded-lg border p-3"><input type="checkbox" checked={formulaire.recommandee} onChange={(event)=>modifier("recommandee",event.target.checked)}/><span>Recommander cette offre au client</span></label><label className="sm:col-span-2"><Label>Garanties incluses (une par ligne)</Label><Textarea rows={3} value={formulaire.garanties} onChange={(event)=>modifier("garanties",event.target.value)} placeholder={"Responsabilité civile\nDéfense et recours"}/></label><label><Label>Options</Label><Textarea rows={3} value={formulaire.options} onChange={(event)=>modifier("options",event.target.value)}/></label><label><Label>Exclusions principales</Label><Textarea rows={3} value={formulaire.exclusions} onChange={(event)=>modifier("exclusions",event.target.value)}/></label><label className="sm:col-span-2"><Label>Documents requis</Label><Textarea rows={2} value={formulaire.documents} onChange={(event)=>modifier("documents",event.target.value)} placeholder="Une pièce par ligne"/></label><label className="sm:col-span-2"><Label>Conseil au client</Label><Textarea rows={3} value={formulaire.conseil} onChange={(event)=>modifier("conseil",event.target.value)}/></label></div><DialogFooter><Button variant="outline" onClick={()=>setOuvert(false)}>Annuler</Button><Button disabled={!valide||enregistrement} onClick={()=>void creer()}>{enregistrement&&<LoaderCircle className="animate-spin"/>}Publier l’offre</Button></DialogFooter></DialogContent></Dialog>
   </CardContent></Card>;
 }
