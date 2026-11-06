@@ -554,6 +554,113 @@ const listeOffre = (valeur: string) => valeur
   .map((element) => element.trim())
   .filter(Boolean);
 
+const libellesDetailCalcul: Record<string, string> = {
+  base_duree_xaf: "Prime de base",
+  majoration_garanties_xaf: "Garanties choisies",
+  majoration_usage_xaf: "Usage du véhicule",
+  majoration_puissance_xaf: "Puissance du véhicule",
+  majoration_anciennete_xaf: "Ancienneté du véhicule",
+  majoration_risque_xaf: "Ajustement du risque",
+  prime_avant_plafond_xaf: "Prime calculée",
+  prime_totale_xaf: "Prime totale",
+};
+
+const libelleCode = (valeur: string | null | undefined) => {
+  if (!valeur) return "Non renseignée";
+  if (valeur === "test_campay_auto") return "Tarification automobile de test";
+  if (valeur === "bcare_v1") return "Tarification santé B-Care";
+  return valeur.replaceAll("_", " ").replace(/\b\w/g, (lettre) => lettre.toUpperCase());
+};
+
+const lireTexteCalcul = (detail: Record<string, unknown>, cle: string) => {
+  const valeur = detail[cle];
+  return typeof valeur === "string" && valeur.trim() ? valeur : null;
+};
+
+const lignesDetailCalcul = (detail: Record<string, unknown>) =>
+  Object.entries(libellesDetailCalcul).flatMap(([cle, libelle]) => {
+    const valeur = detail[cle];
+    return typeof valeur === "number" ? [{ cle, libelle, valeur }] : [];
+  });
+
+function CarteOffreDemande({ offre }: { offre: OffreAssuranceBackoffice }) {
+  const automatique = offre.origine === "automatique";
+  const lignesCalcul = lignesDetailCalcul(offre.detail_calcul);
+  const bareme = lireTexteCalcul(offre.detail_calcul, "bareme_code") ?? offre.bareme_id;
+  const moteur = lireTexteCalcul(offre.detail_calcul, "moteur");
+
+  return (
+    <article className={`overflow-hidden rounded-xl border ${automatique ? "border-blue-200 bg-blue-50/30" : "bg-background"}`}>
+      <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <strong className="text-base">{offre.assureur}</strong>
+            <Badge className={automatique ? "border-blue-200 bg-blue-100 text-blue-800 hover:bg-blue-100" : ""} variant={automatique ? "outline" : "secondary"}>
+              {automatique && <Sparkles className="mr-1 size-3" />}
+              {automatique ? "Générée automatiquement" : "Ajoutée manuellement"}
+            </Badge>
+            {offre.recommandee && !offre.selectionnee && <Badge variant="secondary">Recommandée</Badge>}
+          </div>
+          <p className="text-sm text-muted-foreground">{offre.reference} · {offre.libelle_produit}</p>
+          {automatique && (
+            <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
+              <span><strong className="text-foreground">Formule :</strong> {libelleCode(offre.formule_tarifaire_code)}</span>
+              <span><strong className="text-foreground">Barème :</strong> {bareme ?? "Barème actif"}</span>
+              {moteur && <span><strong className="text-foreground">Moteur :</strong> {libelleCode(moteur)}</span>}
+            </div>
+          )}
+        </div>
+        <StatusBadge value={offre.selectionnee ? "Sélectionnée" : "Disponible"} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-px border-y bg-border sm:grid-cols-4">
+        <div className="bg-background p-3"><span className="block text-xs text-muted-foreground">Prime proposée</span><strong className="mt-1 block text-base">{money.format(offre.prime_xaf)}</strong></div>
+        <div className="bg-background p-3"><span className="block text-xs text-muted-foreground">Durée</span><strong className="mt-1 block text-sm">{offre.duree_mois} mois</strong></div>
+        <div className="bg-background p-3"><span className="block text-xs text-muted-foreground">Date d’effet</span><strong className="mt-1 block text-sm">{displayDate(offre.date_effet)}</strong></div>
+        <div className="bg-background p-3"><span className="block text-xs text-muted-foreground">Franchise</span><strong className="mt-1 block text-sm">{money.format(offre.franchise_xaf)}</strong></div>
+      </div>
+
+      <div className="space-y-4 p-4">
+        {automatique && lignesCalcul.length > 0 && (
+          <div className="rounded-lg border border-blue-100 bg-white p-3">
+            <div className="mb-3 flex items-center gap-2">
+              <ChartNoAxesCombined className="size-4 text-blue-700" />
+              <strong className="text-sm">Détail du calcul automatique</strong>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {lignesCalcul.map((ligne) => (
+                <div className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm" key={ligne.cle}>
+                  <span className="text-muted-foreground">{ligne.libelle}</span>
+                  <strong>{money.format(ligne.valeur)}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Garanties incluses ({offre.garanties.length})</p>
+          <div className="flex flex-wrap gap-2">
+            {offre.garanties.length ? offre.garanties.map((garantie) => <Badge variant="outline" key={garantie}>{garantie}</Badge>) : <span className="text-sm text-muted-foreground">Aucune garantie détaillée.</span>}
+          </div>
+        </div>
+
+        {(offre.options.length > 0 || offre.exclusions.length > 0 || offre.documents_requis.length > 0 || offre.conseil) && (
+          <details className="rounded-lg border bg-background px-3 py-2 text-sm">
+            <summary className="cursor-pointer font-medium">Voir toutes les conditions de l’offre</summary>
+            <div className="mt-3 grid gap-4 border-t pt-3 sm:grid-cols-2">
+              {offre.options.length > 0 && <div><strong>Options</strong><ul className="mt-1 list-disc pl-5 text-muted-foreground">{offre.options.map((option) => <li key={option}>{option}</li>)}</ul></div>}
+              {offre.exclusions.length > 0 && <div><strong>Exclusions</strong><ul className="mt-1 list-disc pl-5 text-muted-foreground">{offre.exclusions.map((exclusion) => <li key={exclusion}>{exclusion}</li>)}</ul></div>}
+              {offre.documents_requis.length > 0 && <div><strong>Documents requis</strong><ul className="mt-1 list-disc pl-5 text-muted-foreground">{offre.documents_requis.map((document) => <li key={document}>{document}</li>)}</ul></div>}
+              {offre.conseil && <div><strong>Conseil au client</strong><p className="mt-1 text-muted-foreground">{offre.conseil}</p></div>}
+            </div>
+          </details>
+        )}
+      </div>
+    </article>
+  );
+}
+
 function OffresDemandePanel({ reference, peutCreer, version, onActualiserDemande }: { reference:string; peutCreer:boolean; version:number; onActualiserDemande:()=>Promise<void> }) {
   const [offres,setOffres]=useState<OffreAssuranceBackoffice[]>([]);
   const [compagnies,setCompagnies]=useState<CompagniePartenaireResume[]>([]);
@@ -593,8 +700,10 @@ function OffresDemandePanel({ reference, peutCreer, version, onActualiserDemande
   const compagnieTest=compagnieSelectionnee?.code==="CAMPAY-DEMO";
   const primeValide=compagnieTest?prime>=1&&prime<=24:prime>=100;
   const valide=Boolean(formulaire.compagnieId)&&primeValide&&Boolean(formulaire.dateEffet)&&listeOffre(formulaire.garanties).length>0;
+  const nombreAutomatiques=offres.filter((offre)=>offre.origine==="automatique").length;
+  const nombreManuelles=offres.length-nombreAutomatiques;
 
-  return <Card className="request-page-panel"><CardContent className="p-0"><div className="section-title-row"><div><p className="eyebrow">Offres réelles</p><h2>Propositions au client</h2></div>{peutCreer&&<Button size="sm" onClick={()=>setOuvert(true)}><Plus/>Ajouter manuellement</Button>}</div>{chargement?<div className="dashboard-skeleton" aria-label="Chargement des offres"><div className="skeleton skeleton--panel"/></div>:offres.length?<div className="request-info-stack">{offres.map((offre)=><article className="request-info-group" key={offre.id}><div className="flex items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><strong>{offre.assureur}</strong><Badge variant={offre.origine==="automatique"?"secondary":"outline"}>{offre.origine==="automatique"?"Automatique":"Manuelle"}</Badge></div><small className="block">{offre.reference} · {offre.duree_mois} mois{offre.formule_tarifaire_code?` · ${offre.formule_tarifaire_code}`:""}</small></div><StatusBadge value={offre.selectionnee?"Sélectionnée":offre.recommandee?"Recommandée":"Disponible"}/></div><div className="mt-3 flex items-end justify-between gap-3"><span>{offre.garanties.length} garantie(s)</span><strong>{money.format(offre.prime_xaf)}</strong></div></article>)}</div>:<div className="request-claim"><div><strong>Aucune offre transmise.</strong><span>Les offres automatiques apparaissent ici lorsqu’un barème complet s’applique. Vous pouvez aussi en ajouter une manuellement.</span></div></div>}
+  return <Card className="request-page-panel"><CardContent className="p-0"><div className="section-title-row"><div><p className="eyebrow">Offres calculées et manuelles</p><h2>Propositions au client</h2>{!chargement&&offres.length>0&&<p className="mt-1 text-sm text-muted-foreground">{nombreAutomatiques} automatique(s) · {nombreManuelles} manuelle(s)</p>}</div>{peutCreer&&<Button size="sm" onClick={()=>setOuvert(true)}><Plus/>Ajouter manuellement</Button>}</div>{chargement?<div className="dashboard-skeleton" aria-label="Chargement des offres"><div className="skeleton skeleton--panel"/></div>:offres.length?<div className="space-y-4 p-4">{offres.map((offre)=><CarteOffreDemande offre={offre} key={offre.id}/>)}</div>:<div className="request-claim"><div><strong>Aucune offre transmise.</strong><span>Les offres automatiques apparaissent ici lorsqu’un barème complet s’applique. Vous pouvez aussi en ajouter une manuellement.</span></div></div>}
     <Dialog open={ouvert} onOpenChange={setOuvert}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>Ajouter une offre réelle</DialogTitle><DialogDescription>Le client verra immédiatement cette offre et pourra la sélectionner avant son paiement CamPay.</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2"><label><Label>Compagnie d’assurance</Label><Select value={formulaire.compagnieId} onValueChange={(valeur)=>modifier("compagnieId",valeur)}><SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner une compagnie"/></SelectTrigger><SelectContent>{compagnies.map((compagnie)=><SelectItem key={compagnie.id} value={compagnie.id}>{compagnie.nom}</SelectItem>)}</SelectContent></Select></label><label><Label>Prime à payer (FCFA)</Label><Input type="number" min={compagnieTest?1:100} max={compagnieTest?24:2_000_000_000} value={formulaire.prime} onChange={(event)=>modifier("prime",event.target.value)} placeholder={compagnieTest?"20":"105000"}/>{compagnieTest&&<small className="mt-1 block text-xs text-muted-foreground">Montant CamPay DEMO : 1 à 24 FCFA.</small>}</label><label><Label>Durée (mois)</Label><Input type="number" min="1" max="120" value={formulaire.duree} onChange={(event)=>modifier("duree",event.target.value)}/></label><label><Label>Date d’effet</Label><Input type="date" value={formulaire.dateEffet} onChange={(event)=>modifier("dateEffet",event.target.value)}/></label><label><Label>Franchise (FCFA)</Label><Input type="number" min="0" value={formulaire.franchise} onChange={(event)=>modifier("franchise",event.target.value)}/></label><label className="flex items-center gap-3 self-end rounded-lg border p-3"><input type="checkbox" checked={formulaire.recommandee} onChange={(event)=>modifier("recommandee",event.target.checked)}/><span>Recommander cette offre au client</span></label><label className="sm:col-span-2"><Label>Garanties incluses (une par ligne)</Label><Textarea rows={3} value={formulaire.garanties} onChange={(event)=>modifier("garanties",event.target.value)} placeholder={"Responsabilité civile\nDéfense et recours"}/></label><label><Label>Options</Label><Textarea rows={3} value={formulaire.options} onChange={(event)=>modifier("options",event.target.value)}/></label><label><Label>Exclusions principales</Label><Textarea rows={3} value={formulaire.exclusions} onChange={(event)=>modifier("exclusions",event.target.value)}/></label><label className="sm:col-span-2"><Label>Documents requis</Label><Textarea rows={2} value={formulaire.documents} onChange={(event)=>modifier("documents",event.target.value)} placeholder="Une pièce par ligne"/></label><label className="sm:col-span-2"><Label>Conseil au client</Label><Textarea rows={3} value={formulaire.conseil} onChange={(event)=>modifier("conseil",event.target.value)}/></label></div><DialogFooter><Button variant="outline" onClick={()=>setOuvert(false)}>Annuler</Button><Button disabled={!valide||enregistrement} onClick={()=>void creer()}>{enregistrement&&<LoaderCircle className="animate-spin"/>}Publier l’offre</Button></DialogFooter></DialogContent></Dialog>
   </CardContent></Card>;
 }
