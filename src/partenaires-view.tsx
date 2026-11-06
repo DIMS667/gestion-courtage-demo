@@ -83,6 +83,23 @@ function EtatVide({ texte }: { texte: string }) {
   return <div className="rounded-xl border border-dashed p-8 text-center text-sm text-slate-500">{texte}</div>;
 }
 
+const afficherPrixRegle = (minimum: number | null, maximum: number | null) => {
+  if (minimum === null && maximum === null) return "—";
+  if (minimum !== null && maximum !== null && minimum === maximum) return money.format(minimum);
+  if (minimum !== null && maximum !== null) return `${money.format(minimum)} à ${money.format(maximum)}`;
+  if (minimum !== null) return `Minimum ${money.format(minimum)}`;
+  return `Maximum ${money.format(maximum!)}`;
+};
+
+function TarifsCompagnie({ compagnie }: { compagnie: DetailCompagniePartenaire }) {
+  const possedeTarifs=compagnie.garanties_tarifaires.length>0||compagnie.tarifs_sante.length>0;
+  if(!possedeTarifs)return <EtatVide texte="Aucun prix de garantie ou de formule n’est encore enregistré pour cette compagnie."/>;
+  return <div className="space-y-4">
+    {compagnie.garanties_tarifaires.length>0&&<Card className="overflow-hidden border-slate-200 shadow-sm"><CardContent className="p-0"><div className="border-b p-5"><h2 className="text-lg font-semibold text-[#10294b]">Prix des garanties automobiles</h2><p className="mt-1 text-sm text-slate-500">Règles et montants propres à cette compagnie, sans mélange avec les autres assureurs.</p></div><div className="max-h-[38rem] overflow-auto"><Table><TableHeader><TableRow><TableHead>Cat.</TableHead><TableHead>Garantie</TableHead><TableHead>Type de prix</TableHead><TableHead>Taux</TableHead><TableHead>Prix / limites</TableHead><TableHead>Assiette</TableHead><TableHead>Précision</TableHead></TableRow></TableHeader><TableBody>{compagnie.garanties_tarifaires.map((regle)=><TableRow key={`${regle.categorie}-${regle.garantie_code}`}><TableCell>{regle.categorie}</TableCell><TableCell className="min-w-52 font-medium">{regle.garantie_libelle}</TableCell><TableCell>{libelleStatut(regle.type_regle)}</TableCell><TableCell>{regle.taux_pourcent===null?"—":`${Number(regle.taux_pourcent).toLocaleString("fr-FR")} %`}</TableCell><TableCell className="whitespace-nowrap font-semibold">{afficherPrixRegle(regle.montant_min_xaf,regle.montant_max_xaf)}</TableCell><TableCell>{regle.assiette?libelleStatut(regle.assiette):"—"}</TableCell><TableCell className="min-w-64 text-xs text-slate-500">{regle.note||"—"}</TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>}
+    {compagnie.tarifs_sante.length>0&&<Card className="overflow-hidden border-slate-200 shadow-sm"><CardContent className="p-0"><div className="border-b p-5"><h2 className="text-lg font-semibold text-[#10294b]">Prix annuels des formules B‑CARE</h2><p className="mt-1 text-sm text-slate-500">Décomposition complète par formule et par bénéficiaire, reprise du document de la compagnie.</p></div><div className="overflow-auto"><Table><TableHeader><TableRow><TableHead>Formule</TableHead><TableHead>Bénéficiaire</TableHead><TableHead>Maladie</TableHead><TableHead>Frais funéraires</TableHead><TableHead>Accessoires</TableHead><TableHead>TVA</TableHead><TableHead>Carte</TableHead><TableHead>RC</TableHead><TableHead>Assistance</TableHead><TableHead>Prime TTC</TableHead></TableRow></TableHeader><TableBody>{compagnie.tarifs_sante.map((tarif)=><TableRow key={`${tarif.formule_code}-${tarif.beneficiaire}`}><TableCell className="font-medium">{tarif.formule_libelle}</TableCell><TableCell>{libelleStatut(tarif.beneficiaire)}</TableCell><TableCell>{money.format(tarif.prime_maladie_xaf)}</TableCell><TableCell>{money.format(tarif.frais_funeraires_xaf)}</TableCell><TableCell>{money.format(tarif.accessoires_xaf)}</TableCell><TableCell>{money.format(tarif.tva_xaf)}</TableCell><TableCell>{money.format(tarif.carte_biometrique_xaf)}</TableCell><TableCell>{tarif.responsabilite_civile_xaf===null?"—":money.format(tarif.responsabilite_civile_xaf)}</TableCell><TableCell>{tarif.assistance_xaf===null?"—":money.format(tarif.assistance_xaf)}</TableCell><TableCell className="whitespace-nowrap font-semibold">{money.format(tarif.prime_ttc_imprimee_xaf)}</TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>}
+  </div>;
+}
+
 function ListePartenaires({
   compagnies,
   chargement,
@@ -202,14 +219,19 @@ function DetailPartenaire({
         <Indicateur label="Sinistres liés" valeur={compagnie.nombre_sinistres} />
       </div>
 
-      <Tabs defaultValue="baremes" className="space-y-4">
+      <Tabs defaultValue="tarifs" className="space-y-4">
         <TabsList className="h-auto flex-wrap justify-start">
+          <TabsTrigger value="tarifs"><WalletCards />Tarifs</TabsTrigger>
           <TabsTrigger value="baremes"><FileBadge />Barèmes</TabsTrigger>
           <TabsTrigger value="offres"><ReceiptText />Offres</TabsTrigger>
           <TabsTrigger value="contrats"><ShieldCheck />Contrats</TabsTrigger>
           <TabsTrigger value="paiements"><WalletCards />Paiements</TabsTrigger>
           <TabsTrigger value="sinistres"><TriangleAlert />Sinistres</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="tarifs">
+          <TarifsCompagnie compagnie={compagnie}/>
+        </TabsContent>
 
         <TabsContent value="baremes" className="space-y-4">
           {compagnie.baremes.length ? compagnie.baremes.map((bareme) => (
