@@ -68,6 +68,15 @@ export type DetailDemandeClient = ResumeDemandeClient & {
   donnees: Record<string, unknown>;
 };
 
+export type MessageConversationBackoffice = {
+  id: string;
+  demande_reference: string;
+  type_auteur: "client" | "courtier";
+  auteur_nom: string;
+  contenu: string;
+  cree_le: string;
+};
+
 export type OffreAssuranceBackoffice = {
   id: string;
   compagnie_id: string | null;
@@ -562,6 +571,25 @@ export const apiBackoffice = {
     return appeler<DetailDemandeClient>(
       `/backoffice/demandes-clients/${encodeURIComponent(reference)}`,
     );
+  },
+
+  listerMessagesDemande(reference: string) {
+    return appeler<MessageConversationBackoffice[]>(
+      `/backoffice/messagerie/${encodeURIComponent(reference)}`,
+    );
+  },
+
+  envoyerMessageDemande(reference: string, contenu: string) {
+    return appeler<MessageConversationBackoffice>(
+      `/backoffice/messagerie/${encodeURIComponent(reference)}`,
+      { method: "POST", body: JSON.stringify({ contenu }) },
+    );
+  },
+
+  creerFluxMessages() {
+    return new EventSource(`${URL_API}/backoffice/messagerie/flux`, {
+      withCredentials: true,
+    });
   },
 
   listerOffresDemande(reference: string) {
