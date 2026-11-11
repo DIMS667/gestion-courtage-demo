@@ -265,15 +265,22 @@ export type ContratAssuranceBackoffice = {
   reference: string;
   numero_police: string | null;
   demande_reference: string;
-  paiement_id: string;
+  offre_id: string;
+  offre_reference: string;
+  paiement_id: string | null;
   produit: string;
   libelle_produit: string;
   assureur: string;
   prime_xaf: number;
+  duree_mois: number;
+  franchise_xaf: number;
   statut: "en_preparation" | "actif" | "expire";
   date_effet: string;
   date_expiration: string;
   garanties: string[];
+  options: string[];
+  exclusions: string[];
+  documents_requis: string[];
   cree_le: string;
 };
 
@@ -637,6 +644,13 @@ export const apiBackoffice = {
 
   listerContratsReels() {
     return appeler<ContratAssuranceBackoffice[]>("/backoffice/souscriptions/contrats");
+  },
+
+  preparerContrat(referenceDemande: string) {
+    return appeler<ContratAssuranceBackoffice>(
+      "/backoffice/souscriptions/contrats/preparation",
+      { method: "POST", body: JSON.stringify({ demande_reference: referenceDemande }) },
+    );
   },
 
   activerContrat(contratId: string, numeroPolice: string) {
