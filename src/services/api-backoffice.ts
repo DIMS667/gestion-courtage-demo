@@ -281,6 +281,21 @@ export type ContratAssuranceBackoffice = {
   options: string[];
   exclusions: string[];
   documents_requis: string[];
+  informations_police: {
+    numero_attestation?: string | null;
+    code_agence?: string | null;
+    reseau_distribution?: string | null;
+    code_apporteur?: string | null;
+    lieu_emission?: string | null;
+    date_emission?: string | null;
+    prime_nette_xaf?: number;
+    accessoires_xaf?: number;
+    taxes_xaf?: number;
+    observations?: string | null;
+  };
+  police_disponible: boolean;
+  police_nom_fichier: string | null;
+  police_televersee_le: string | null;
   cree_le: string;
 };
 
@@ -437,6 +452,21 @@ async function appeler<T>(chemin: string, options: RequestInit = {}): Promise<T>
   }
   if (reponse.status === 204) return undefined as T;
   return reponse.json() as Promise<T>;
+}
+
+async function appelerFichier(chemin: string): Promise<Blob> {
+  const reponse = await fetch(`${URL_API}${chemin}`, { credentials: "include" });
+  if (!reponse.ok) {
+    let message = "Le document n’a pas pu être généré.";
+    try {
+      const corps = await reponse.json();
+      message = corps?.erreur?.message ?? corps?.detail ?? message;
+    } catch {
+      // La réponse ne contient pas de JSON exploitable.
+    }
+    throw new ErreurApi(message, reponse.status);
+  }
+  return reponse.blob();
 }
 
 export const apiBackoffice = {
@@ -657,6 +687,51 @@ export const apiBackoffice = {
     return appeler<ContratAssuranceBackoffice>(
       `/backoffice/souscriptions/contrats/${encodeURIComponent(contratId)}/activation`,
       { method: "POST", body: JSON.stringify({ numero_police: numeroPolice }) },
+    );
+  },
+
+  mettreAJourPreparationContrat(
+    contratId: string,
+    entree: {
+      numero_police: string | null;
+      numero_attestation: string | null;
+      code_agence: string | null;
+      reseau_distribution: string | null;
+      code_apporteur: string | null;
+      lieu_emission: string | null;
+      date_emission: string | null;
+      date_effet: string;
+      date_expiration: string;
+      prime_nette_xaf: number;
+      accessoires_xaf: number;
+      taxes_xaf: number;
+      observations: string | null;
+    },
+  ) {
+    return appeler<ContratAssuranceBackoffice>(
+      `/backoffice/souscriptions/contrats/${encodeURIComponent(contratId)}/preparation`,
+      { method: "PUT", body: JSON.stringify(entree) },
+    );
+  },
+
+  telechargerProjetContrat(contratId: string) {
+    return appelerFichier(
+      `/backoffice/souscriptions/contrats/${encodeURIComponent(contratId)}/projet`,
+    );
+  },
+
+  televerserPoliceContrat(contratId: string, fichier: File) {
+    const formulaire = new FormData();
+    formulaire.append("fichier", fichier);
+    return appeler<ContratAssuranceBackoffice>(
+      `/backoffice/souscriptions/contrats/${encodeURIComponent(contratId)}/police`,
+      { method: "PUT", body: formulaire },
+    );
+  },
+
+  obtenirLienPoliceContrat(contratId: string) {
+    return appeler<LienConsultationDocument>(
+      `/backoffice/souscriptions/contrats/${encodeURIComponent(contratId)}/police/consultation`,
     );
   },
 

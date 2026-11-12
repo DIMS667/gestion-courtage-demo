@@ -9,6 +9,7 @@ import {
   Check,
   ChevronRight,
   ClipboardCheck,
+  Download,
   FileText,
   Files,
   Gauge,
@@ -25,6 +26,7 @@ import {
   Sparkles,
   Eye,
   TriangleAlert,
+  Upload,
   UserCog,
   Users,
   WalletCards,
@@ -925,16 +927,247 @@ function PaiementsReelsView() {
 }
 
 function ContratsReelsView({ utilisateur }: { utilisateur: UtilisateurBackoffice }) {
-  const [contrats,setContrats]=useState<ContratAssuranceBackoffice[]>([]);
-  const [demandes,setDemandes]=useState<ResumeDemandeClient[]>([]);
-  const [chargement,setChargement]=useState(true);
-  const [selection,setSelection]=useState<ContratAssuranceBackoffice|null>(null);
-  const [numeroPolice,setNumeroPolice]=useState("");
-  const [operation,setOperation]=useState(false);
-  const charger=async()=>{try{const [listeContrats,listeDemandes]=await Promise.all([apiBackoffice.listerContratsReels(),apiBackoffice.listerDemandes()]);setContrats(listeContrats);setDemandes(listeDemandes);}catch(cause){toast.error(cause instanceof Error?cause.message:"Impossible de charger les contrats.");}finally{setChargement(false);}};
-  useEffect(()=>{let actif=true;const actualiser=()=>Promise.all([apiBackoffice.listerContratsReels(),apiBackoffice.listerDemandes()]).then(([listeContrats,listeDemandes])=>{if(actif){setContrats(listeContrats);setDemandes(listeDemandes);setChargement(false);}}).catch(()=>{if(actif)setChargement(false);});void actualiser();const intervalle=window.setInterval(actualiser,10000);return()=>{actif=false;window.clearInterval(intervalle);};},[]);
-  const activer=async()=>{if(!selection||numeroPolice.trim().length<3)return;setOperation(true);try{await apiBackoffice.activerContrat(selection.id,numeroPolice.trim());toast.success("La police est active et le client a été notifié.");setSelection(null);setNumeroPolice("");await charger();}catch(cause){toast.error(cause instanceof Error?cause.message:"Le contrat n’a pas pu être activé.");}finally{setOperation(false);}};
-  return <><PageHeading eyebrow="Production" title="Contrats à préparer" subtitle="Le gestionnaire prépare le contrat à partir de l’offre actuellement choisie par le client."/>{chargement?<div className="dashboard-skeleton"><div className="skeleton skeleton--panel"/></div>:<TableCard><Table><TableHeader><TableRow><TableHead>Contrat</TableHead><TableHead>Demande</TableHead><TableHead>Offre choisie</TableHead><TableHead>Produit</TableHead><TableHead>Assureur</TableHead><TableHead>Prime</TableHead><TableHead>Effet</TableHead><TableHead>Expiration</TableHead><TableHead>Statut</TableHead><TableHead>Action</TableHead></TableRow></TableHeader><TableBody>{contrats.map((contrat)=>{const responsable=demandes.find((demande)=>demande.reference===contrat.demande_reference)?.responsable;const peutPreparer=responsable?.id===utilisateur.id;return <TableRow key={contrat.id}><TableCell className="ref-cell">{contrat.numero_police||contrat.reference}</TableCell><TableCell>{contrat.demande_reference}</TableCell><TableCell className="ref-cell">{contrat.offre_reference}</TableCell><TableCell>{contrat.libelle_produit}</TableCell><TableCell>{contrat.assureur}</TableCell><TableCell><strong>{money.format(contrat.prime_xaf)}</strong></TableCell><TableCell>{displayDate(contrat.date_effet)}</TableCell><TableCell>{displayDate(contrat.date_expiration)}</TableCell><TableCell><StatusBadge value={contrat.statut==="actif"?"Actif":contrat.statut==="expire"?"Expiré":"À préparer"}/></TableCell><TableCell>{contrat.statut==="en_preparation"?(peutPreparer?<Button size="sm" onClick={()=>{setSelection(contrat);setNumeroPolice(contrat.numero_police??"");}}>Finaliser le contrat</Button>:<Badge variant="outline">Prise en charge requise</Badge>):"—"}</TableCell></TableRow>;})}</TableBody></Table>{contrats.length===0&&<div className="request-empty-state"><ShieldCheck/><strong>Aucun contrat à préparer</strong><span>Ouvrez un dossier dont le client a choisi une offre, puis cliquez sur « Préparer le contrat ».</span></div>}</TableCard>}<Dialog open={Boolean(selection)} onOpenChange={(ouvert)=>{if(!ouvert){setSelection(null);setNumeroPolice("");}}}><DialogContent><DialogHeader><DialogTitle>Finaliser le contrat du client</DialogTitle><DialogDescription>Le contrat reprend l’offre {selection?.offre_reference}. Vérifiez les éléments puis renseignez le numéro officiel de la police. Le client sera notifié après validation.</DialogDescription></DialogHeader>{selection&&<div className="grid gap-2 rounded-xl border bg-muted/40 p-3 text-sm"><div className="flex justify-between gap-3"><span>Offre choisie</span><strong>{selection.offre_reference}</strong></div><div className="flex justify-between gap-3"><span>Prime</span><strong>{money.format(selection.prime_xaf)}</strong></div><div className="flex justify-between gap-3"><span>Franchise</span><strong>{money.format(selection.franchise_xaf)}</strong></div><div><span className="text-muted-foreground">Garanties</span><p className="mt-1 font-medium">{selection.garanties.join(" · ")}</p></div></div>}<Label>Numéro de police</Label><Input value={numeroPolice} onChange={(event)=>setNumeroPolice(event.target.value)} placeholder="Numéro officiel de la police"/><DialogFooter><Button variant="outline" onClick={()=>setSelection(null)}>Annuler</Button><Button disabled={numeroPolice.trim().length<3||operation} onClick={()=>void activer()}>{operation&&<LoaderCircle className="animate-spin"/>}Finaliser et notifier</Button></DialogFooter></DialogContent></Dialog></>;
+  const [contrats, setContrats] = useState<ContratAssuranceBackoffice[]>([]);
+  const [demandes, setDemandes] = useState<ResumeDemandeClient[]>([]);
+  const [chargement, setChargement] = useState(true);
+  const [selection, setSelection] = useState<ContratAssuranceBackoffice | null>(null);
+  const [operation, setOperation] = useState(false);
+  const [numeroPolice, setNumeroPolice] = useState("");
+  const [numeroAttestation, setNumeroAttestation] = useState("");
+  const [codeAgence, setCodeAgence] = useState("");
+  const [reseauDistribution, setReseauDistribution] = useState("");
+  const [codeApporteur, setCodeApporteur] = useState("");
+  const [lieuEmission, setLieuEmission] = useState("");
+  const [dateEmission, setDateEmission] = useState("");
+  const [dateEffet, setDateEffet] = useState("");
+  const [dateExpiration, setDateExpiration] = useState("");
+  const [primeNette, setPrimeNette] = useState(0);
+  const [accessoires, setAccessoires] = useState(0);
+  const [taxes, setTaxes] = useState(0);
+  const [observations, setObservations] = useState("");
+  const [fichierPolice, setFichierPolice] = useState<File | null>(null);
+
+  const charger = async () => {
+    try {
+      const [listeContrats, listeDemandes] = await Promise.all([
+        apiBackoffice.listerContratsReels(),
+        apiBackoffice.listerDemandes(),
+      ]);
+      setContrats(listeContrats);
+      setDemandes(listeDemandes);
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Impossible de charger les contrats.");
+    } finally {
+      setChargement(false);
+    }
+  };
+
+  useEffect(() => {
+    let actif = true;
+    const actualiser = () => Promise.all([
+      apiBackoffice.listerContratsReels(),
+      apiBackoffice.listerDemandes(),
+    ]).then(([listeContrats, listeDemandes]) => {
+      if (actif) {
+        setContrats(listeContrats);
+        setDemandes(listeDemandes);
+        setChargement(false);
+      }
+    }).catch(() => { if (actif) setChargement(false); });
+    void actualiser();
+    const intervalle = window.setInterval(actualiser, 10000);
+    return () => { actif = false; window.clearInterval(intervalle); };
+  }, []);
+
+  const ouvrirPreparation = (contrat: ContratAssuranceBackoffice) => {
+    const informations = contrat.informations_police ?? {};
+    setSelection(contrat);
+    setNumeroPolice(contrat.numero_police ?? "");
+    setNumeroAttestation(informations.numero_attestation ?? "");
+    setCodeAgence(informations.code_agence ?? "");
+    setReseauDistribution(informations.reseau_distribution ?? "");
+    setCodeApporteur(informations.code_apporteur ?? "");
+    setLieuEmission(informations.lieu_emission ?? "");
+    setDateEmission(informations.date_emission ?? "");
+    setDateEffet(contrat.date_effet);
+    setDateExpiration(contrat.date_expiration);
+    setPrimeNette(informations.prime_nette_xaf ?? contrat.prime_xaf);
+    setAccessoires(informations.accessoires_xaf ?? 0);
+    setTaxes(informations.taxes_xaf ?? 0);
+    setObservations(informations.observations ?? "");
+    setFichierPolice(null);
+  };
+
+  const entreePreparation = () => ({
+    numero_police: numeroPolice.trim() || null,
+    numero_attestation: numeroAttestation.trim() || null,
+    code_agence: codeAgence.trim() || null,
+    reseau_distribution: reseauDistribution.trim() || null,
+    code_apporteur: codeApporteur.trim() || null,
+    lieu_emission: lieuEmission.trim() || null,
+    date_emission: dateEmission || null,
+    date_effet: dateEffet,
+    date_expiration: dateExpiration,
+    prime_nette_xaf: Math.max(0, primeNette),
+    accessoires_xaf: Math.max(0, accessoires),
+    taxes_xaf: Math.max(0, taxes),
+    observations: observations.trim() || null,
+  });
+
+  const enregistrer = async () => {
+    if (!selection) throw new Error("Aucun contrat sélectionné.");
+    const contrat = await apiBackoffice.mettreAJourPreparationContrat(
+      selection.id,
+      entreePreparation(),
+    );
+    setSelection(contrat);
+    setContrats((courants) => courants.map((item) => item.id === contrat.id ? contrat : item));
+    return contrat;
+  };
+
+  const voirProjet = async () => {
+    if (!selection || operation) return;
+    const apercu = window.open("", "_blank");
+    setOperation(true);
+    try {
+      const contrat = await enregistrer();
+      const fichier = await apiBackoffice.telechargerProjetContrat(contrat.id);
+      const url = URL.createObjectURL(fichier);
+      if (apercu) apercu.location.href = url;
+      else {
+        const lien = document.createElement("a");
+        lien.href = url;
+        lien.target = "_blank";
+        lien.click();
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (cause) {
+      apercu?.close();
+      toast.error(cause instanceof Error ? cause.message : "Le projet n’a pas pu être généré.");
+    } finally {
+      setOperation(false);
+    }
+  };
+
+  const consulterPolice = async () => {
+    if (!selection || operation) return;
+    const apercu = window.open("", "_blank");
+    setOperation(true);
+    try {
+      const lien = await apiBackoffice.obtenirLienPoliceContrat(selection.id);
+      if (apercu) apercu.location.href = lien.url;
+      else window.location.assign(lien.url);
+    } catch (cause) {
+      apercu?.close();
+      toast.error(cause instanceof Error ? cause.message : "La police n’a pas pu être ouverte.");
+    } finally {
+      setOperation(false);
+    }
+  };
+
+  const activer = async () => {
+    if (!selection || numeroPolice.trim().length < 3 || operation) return;
+    setOperation(true);
+    try {
+      let contrat = await enregistrer();
+      if (fichierPolice) {
+        contrat = await apiBackoffice.televerserPoliceContrat(contrat.id, fichierPolice);
+      }
+      if (!contrat.police_disponible) {
+        throw new Error("Déposez d’abord la police PDF officielle signée ou cachetée.");
+      }
+      await apiBackoffice.activerContrat(contrat.id, numeroPolice.trim());
+      toast.success("La police officielle est active et le client a été notifié.");
+      setSelection(null);
+      setFichierPolice(null);
+      await charger();
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Le contrat n’a pas pu être activé.");
+    } finally {
+      setOperation(false);
+    }
+  };
+
+  const fermer = () => {
+    setSelection(null);
+    setFichierPolice(null);
+  };
+
+  return <>
+    <PageHeading
+      eyebrow="Production"
+      title="Contrats à préparer"
+      subtitle="Préparez un projet depuis l’offre choisie, puis déposez la police officielle émise par la compagnie."
+    />
+    {chargement ? <div className="dashboard-skeleton"><div className="skeleton skeleton--panel" /></div> : <TableCard>
+      <Table><TableHeader><TableRow><TableHead>Contrat</TableHead><TableHead>Demande</TableHead><TableHead>Offre choisie</TableHead><TableHead>Produit</TableHead><TableHead>Assureur</TableHead><TableHead>Prime</TableHead><TableHead>Effet</TableHead><TableHead>Police PDF</TableHead><TableHead>Statut</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
+        <TableBody>{contrats.map((contrat) => {
+          const responsable = demandes.find((demande) => demande.reference === contrat.demande_reference)?.responsable;
+          const peutPreparer = responsable?.id === utilisateur.id;
+          return <TableRow key={contrat.id}>
+            <TableCell className="ref-cell">{contrat.numero_police || contrat.reference}</TableCell>
+            <TableCell>{contrat.demande_reference}</TableCell>
+            <TableCell className="ref-cell">{contrat.offre_reference}</TableCell>
+            <TableCell>{contrat.libelle_produit}</TableCell>
+            <TableCell>{contrat.assureur}</TableCell>
+            <TableCell><strong>{money.format(contrat.prime_xaf)}</strong></TableCell>
+            <TableCell>{displayDate(contrat.date_effet)}</TableCell>
+            <TableCell>{contrat.police_disponible ? <Badge variant="secondary">Déposée</Badge> : <Badge variant="outline">À déposer</Badge>}</TableCell>
+            <TableCell><StatusBadge value={contrat.statut === "actif" ? "Actif" : contrat.statut === "expire" ? "Expiré" : "À préparer"} /></TableCell>
+            <TableCell>{contrat.statut === "en_preparation" ? (peutPreparer ? <Button size="sm" onClick={() => ouvrirPreparation(contrat)}>Préparer la police</Button> : <Badge variant="outline">Prise en charge requise</Badge>) : "—"}</TableCell>
+          </TableRow>;
+        })}</TableBody>
+      </Table>
+      {contrats.length === 0 && <div className="request-empty-state"><ShieldCheck /><strong>Aucun contrat à préparer</strong><span>Ouvrez un dossier dont le client a choisi une offre, puis cliquez sur « Préparer le contrat ».</span></div>}
+    </TableCard>}
+
+    <Dialog open={Boolean(selection)} onOpenChange={(ouvert) => { if (!ouvert) fermer(); }}>
+      <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Préparer la police du client</DialogTitle>
+          <DialogDescription>Le projet reprend l’offre {selection?.offre_reference}. La police définitive doit porter les références de la compagnie et être déposée au format PDF.</DialogDescription>
+        </DialogHeader>
+        {selection && <>
+          <div className="grid gap-2 rounded-xl border bg-muted/40 p-3 text-sm sm:grid-cols-3">
+            <div><span className="text-muted-foreground">Offre choisie</span><strong className="block">{selection.offre_reference}</strong></div>
+            <div><span className="text-muted-foreground">Assureur</span><strong className="block">{selection.assureur}</strong></div>
+            <div><span className="text-muted-foreground">Franchise</span><strong className="block">{money.format(selection.franchise_xaf)}</strong></div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-2"><Label>Numéro officiel de police *</Label><Input value={numeroPolice} onChange={(event) => setNumeroPolice(event.target.value)} placeholder="Attribué par la compagnie" /></div>
+            <div className="grid gap-2"><Label>Numéro d’attestation</Label><Input value={numeroAttestation} onChange={(event) => setNumeroAttestation(event.target.value)} /></div>
+            <div className="grid gap-2"><Label>Code agence</Label><Input value={codeAgence} onChange={(event) => setCodeAgence(event.target.value)} /></div>
+            <div className="grid gap-2"><Label>Réseau de distribution</Label><Input value={reseauDistribution} onChange={(event) => setReseauDistribution(event.target.value)} /></div>
+            <div className="grid gap-2"><Label>Code apporteur</Label><Input value={codeApporteur} onChange={(event) => setCodeApporteur(event.target.value)} /></div>
+            <div className="grid gap-2"><Label>Lieu d’émission</Label><Input value={lieuEmission} onChange={(event) => setLieuEmission(event.target.value)} /></div>
+            <div className="grid gap-2"><Label>Date d’émission</Label><Input type="date" value={dateEmission} onChange={(event) => setDateEmission(event.target.value)} /></div>
+            <div className="grid gap-2"><Label>Date d’effet *</Label><Input type="date" value={dateEffet} onChange={(event) => setDateEffet(event.target.value)} /></div>
+            <div className="grid gap-2"><Label>Date d’expiration *</Label><Input type="date" value={dateExpiration} onChange={(event) => setDateExpiration(event.target.value)} /></div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-2"><Label>Prime nette (FCFA)</Label><Input type="number" min={0} value={primeNette} onChange={(event) => setPrimeNette(Number(event.target.value))} /></div>
+            <div className="grid gap-2"><Label>Accessoires (FCFA)</Label><Input type="number" min={0} value={accessoires} onChange={(event) => setAccessoires(Number(event.target.value))} /></div>
+            <div className="grid gap-2"><Label>Taxes (FCFA)</Label><Input type="number" min={0} value={taxes} onChange={(event) => setTaxes(Number(event.target.value))} /></div>
+          </div>
+          <div className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-sm"><span>Total de la police</span><strong className="ml-2">{money.format(primeNette + accessoires + taxes)}</strong></div>
+          <div className="grid gap-2"><Label>Observations et clauses particulières</Label><Textarea value={observations} onChange={(event) => setObservations(event.target.value)} placeholder="Conditions particulières ou précisions utiles" /></div>
+
+          <div className="grid gap-3 rounded-xl border p-4">
+            <div><Label>Police officielle PDF *</Label><p className="mt-1 text-sm text-muted-foreground">Déposez uniquement le document émis, signé ou cacheté par la compagnie.</p></div>
+            <Input type="file" accept="application/pdf,.pdf" onChange={(event) => setFichierPolice(event.target.files?.[0] ?? null)} />
+            {selection.police_disponible && <div className="flex flex-wrap items-center gap-2 text-sm"><Badge variant="secondary">Police déjà déposée</Badge><span>{selection.police_nom_fichier}</span><Button size="sm" variant="outline" onClick={() => void consulterPolice()}><Eye />Consulter</Button></div>}
+          </div>
+        </>}
+        <DialogFooter className="flex-wrap gap-2">
+          <Button variant="outline" onClick={fermer}>Annuler</Button>
+          <Button variant="outline" disabled={operation || !dateEffet || !dateExpiration} onClick={() => void voirProjet()}>{operation ? <LoaderCircle className="animate-spin" /> : <Download />}Enregistrer et voir le projet</Button>
+          <Button disabled={operation || numeroPolice.trim().length < 3 || !dateEffet || !dateExpiration || (!selection?.police_disponible && !fichierPolice)} onClick={() => void activer()}>{operation ? <LoaderCircle className="animate-spin" /> : <Upload />}Déposer, activer et notifier</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </>;
 }
 
 function Summary({ label, value, alert }: { label: string; value: string; alert?: boolean }) { return <Card className="summary-card"><CardContent><span>{label}</span><strong className={alert ? "amount-due" : ""}>{value}</strong></CardContent></Card>; }
