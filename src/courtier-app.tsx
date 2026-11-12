@@ -1215,6 +1215,19 @@ function ContratsReelsView({ utilisateur }: { utilisateur: UtilisateurBackoffice
     }
   };
 
+  const enregistrerBrouillon = async () => {
+    if (!selection || operation) return;
+    setOperation(true);
+    try {
+      await enregistrer();
+      toast.success("Le brouillon de la police a été enregistré.");
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Le brouillon n’a pas pu être enregistré.");
+    } finally {
+      setOperation(false);
+    }
+  };
+
   const consulterPolice = async () => {
     if (!selection || operation) return;
     const apercu = window.open("", "_blank");
@@ -1260,12 +1273,13 @@ function ContratsReelsView({ utilisateur }: { utilisateur: UtilisateurBackoffice
   };
 
   return <>
-    <PageHeading
-      eyebrow="Production"
-      title="Contrats à préparer"
-      subtitle="Préparez un projet depuis l’offre choisie, puis déposez la police officielle émise par la compagnie."
-    />
-    {chargement ? <div className="dashboard-skeleton"><div className="skeleton skeleton--panel" /></div> : <TableCard>
+    {!selection ? <>
+      <PageHeading
+        eyebrow="Production"
+        title="Contrats à préparer"
+        subtitle="Préparez un projet depuis l’offre choisie, puis déposez la police officielle émise par la compagnie."
+      />
+      {chargement ? <div className="dashboard-skeleton"><div className="skeleton skeleton--panel" /></div> : <TableCard>
       <Table><TableHeader><TableRow><TableHead>Contrat</TableHead><TableHead>Demande</TableHead><TableHead>Offre choisie</TableHead><TableHead>Produit</TableHead><TableHead>Assureur</TableHead><TableHead>Prime</TableHead><TableHead>Effet</TableHead><TableHead>Police PDF</TableHead><TableHead>Statut</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
         <TableBody>{contrats.map((contrat) => {
           const responsable = demandes.find((demande) => demande.reference === contrat.demande_reference)?.responsable;
@@ -1285,14 +1299,21 @@ function ContratsReelsView({ utilisateur }: { utilisateur: UtilisateurBackoffice
         })}</TableBody>
       </Table>
       {contrats.length === 0 && <div className="request-empty-state"><ShieldCheck /><strong>Aucun contrat à préparer</strong><span>Ouvrez un dossier dont le client a choisi une offre, puis cliquez sur « Préparer le contrat ».</span></div>}
-    </TableCard>}
-
-    <Dialog open={Boolean(selection)} onOpenChange={(ouvert) => { if (!ouvert) fermer(); }}>
-      <DialogContent className="max-h-[92vh] max-w-6xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Préparer la police du client</DialogTitle>
-          <DialogDescription>Le projet reprend l’offre {selection?.offre_reference}. La police définitive doit porter les références de la compagnie et être déposée au format PDF.</DialogDescription>
-        </DialogHeader>
+      </TableCard>}
+    </> : <div className="request-page contract-preparation-page">
+      <button type="button" className="request-page-back" onClick={fermer}><ArrowLeft />Retour aux contrats</button>
+      <header className="request-page-header">
+        <div>
+          <p className="eyebrow">Production · Police d’assurance</p>
+          <h1>Préparer la police du client</h1>
+          <p>Complétez les informations du contrat, contrôlez le projet PDF, puis déposez la police officielle.</p>
+        </div>
+        <div className="request-page-badges">
+          <Badge variant="secondary">{selection.offre_reference}</Badge>
+          <Badge variant="outline">{selection.demande_reference}</Badge>
+        </div>
+      </header>
+      <div className="space-y-5">
         {selection && <>
           <div className="grid gap-2 rounded-xl border bg-muted/40 p-3 text-sm sm:grid-cols-3">
             <div><span className="text-muted-foreground">Offre choisie</span><strong className="block">{selection.offre_reference}</strong></div>
@@ -1400,13 +1421,14 @@ function ContratsReelsView({ utilisateur }: { utilisateur: UtilisateurBackoffice
             {selection.police_disponible && <div className="flex flex-wrap items-center gap-2 text-sm"><Badge variant="secondary">Police déjà déposée</Badge><span>{selection.police_nom_fichier}</span><Button size="sm" variant="outline" onClick={() => void consulterPolice()}><Eye />Consulter</Button></div>}
           </div>
         </>}
-        <DialogFooter className="flex-wrap gap-2">
-          <Button variant="outline" onClick={fermer}>Annuler</Button>
+        <div className="sticky bottom-4 z-10 flex flex-wrap justify-end gap-2 rounded-xl border bg-background/95 p-4 shadow-lg backdrop-blur">
+          <Button variant="outline" onClick={fermer}>Retour aux contrats</Button>
+          <Button variant="outline" disabled={operation || !dateEffet || !dateExpiration} onClick={() => void enregistrerBrouillon()}>{operation && <LoaderCircle className="animate-spin" />}Enregistrer le brouillon</Button>
           <Button variant="outline" disabled={operation || !dateEffet || !dateExpiration} onClick={() => void voirProjet()}>{operation ? <LoaderCircle className="animate-spin" /> : <Download />}Enregistrer et voir le projet</Button>
           <Button disabled={operation || numeroPolice.trim().length < 3 || !dateEffet || !dateExpiration || (!selection?.police_disponible && !fichierPolice)} onClick={() => void activer()}>{operation ? <LoaderCircle className="animate-spin" /> : <Upload />}Déposer, activer et notifier</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </div>}
   </>;
 }
 
