@@ -580,7 +580,7 @@ const libellesDetailCalcul: Record<string, string> = {
 
 const libelleCode = (valeur: string | null | undefined) => {
   if (!valeur) return "Non renseignée";
-  if (valeur === "royal_onyx_auto" || valeur === "royal_onyx_auto_v1") return "Tarification automobile Royal Onyx";
+  if (["royal_onyx_auto", "royal_onyx_auto_v1", "royal_auto_lecture_directe", "royal_direct_snapshot", "royal_legacy_snapshot"].includes(valeur)) return "Tarification automobile Royal Onyx";
   if (valeur === "bcare_v1") return "Tarification santé B-Care";
   return valeur.replaceAll("_", " ").replace(/\b\w/g, (lettre) => lettre.toUpperCase());
 };

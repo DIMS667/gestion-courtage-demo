@@ -168,6 +168,34 @@ export type DetailCompagniePartenaire = CompagniePartenaireResume & {
     assiette: string | null;
     note: string;
   }>;
+  tarifs_automobile_lecture_directe: Array<{
+    id: string;
+    bareme_code: string;
+    source_feuille: string;
+    source_ligne: number;
+    categorie_code: string;
+    zone: string | null;
+    energie: string | null;
+    puissance_min: number | null;
+    puissance_max: number | null;
+    duree_mois: number;
+    passagers_min: number | null;
+    passagers_max: number | null;
+    nombre_places_total: number | null;
+    possede_remorque: boolean | null;
+    garanties_codes: string[];
+    prime_rc_rti_xaf: number | string;
+    prime_defense_recours_xaf: number | string;
+    prime_personnes_xaf: number | string;
+    prime_nette_xaf: number | string;
+    accessoires_xaf: number | string;
+    fichier_asac_xaf: number | string;
+    taxes_xaf: number | string;
+    carte_regionale_xaf: number | string;
+    prime_ttc_xaf: number | string;
+    a_confirmer: boolean;
+    note: string;
+  }>;
   formules_sante: Array<{
     id: string;
     bareme_code: string;
