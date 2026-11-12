@@ -282,21 +282,65 @@ export type ContratAssuranceBackoffice = {
   exclusions: string[];
   documents_requis: string[];
   informations_police: {
+    numero_inscription?: string | null;
+    numero_avenant?: string | null;
     numero_attestation?: string | null;
-    code_agence?: string | null;
-    reseau_distribution?: string | null;
-    code_apporteur?: string | null;
+    numero_carte_rose?: string | null;
+    nature_operation?: string | null;
+    agence?: string | null;
+    contact_agence?: string | null;
+    reseau_code?: string | null;
+    reseau_libelle?: string | null;
+    apporteur_code?: string | null;
+    apporteur_libelle?: string | null;
+    branche?: string | null;
+    numero_client?: string | null;
+    civilite_souscripteur?: string | null;
+    profession_souscripteur?: string | null;
+    numero_contribuable?: string | null;
+    numero_cni?: string | null;
+    numero_assure?: string | null;
+    profession_assure?: string | null;
+    adresse_assure?: string | null;
+    zone_tarification?: string | null;
+    categorie_socioprofessionnelle?: string | null;
+    type_conducteur?: string | null;
+    date_premiere_mise_circulation?: string | null;
+    charge_utile_kg?: number | null;
+    valeur_neuve_xaf?: number | null;
+    valeur_venale_xaf?: number | null;
+    valeur_accessoires_xaf?: number | null;
+    remorque_description?: string | null;
     lieu_emission?: string | null;
     date_emission?: string | null;
+    heure_emission?: string | null;
+    reconduction?: string | null;
+    details_garanties?: LigneGarantiePolice[];
     prime_nette_xaf?: number;
     accessoires_xaf?: number;
+    fichier_asac_xaf?: number;
     taxes_xaf?: number;
+    carte_cemac_xaf?: number;
+    dta_xaf?: number;
+    autres_frais_xaf?: number;
+    territoire_couverture?: string | null;
+    nombre_exemplaires?: number | null;
     observations?: string | null;
   };
   police_disponible: boolean;
   police_nom_fichier: string | null;
   police_televersee_le: string | null;
   cree_le: string;
+};
+
+export type LigneGarantiePolice = {
+  libelle: string;
+  capital_montant: string | null;
+  franchise: string | null;
+  annuite_xaf: number | null;
+  prime_periode_xaf: number | null;
+  reduction_xaf: number;
+  prime_xaf: number | null;
 };
 
 export type StatutSinistre =
@@ -407,6 +451,10 @@ const URL_API = (
   import.meta.env.VITE_API_BASE_URL ?? "https://api.followupassurance.com/api/v1"
 ).replace(/\/$/, "");
 const CLE_CSRF = "followup_backoffice_csrf";
+const CLE_UTILISATEUR_ATTENDU = "followup_backoffice_utilisateur_attendu";
+const CLE_SIGNAL_SESSION_ATTENDU = "followup_backoffice_signal_session_attendu";
+export const CLE_SYNCHRONISATION_SESSION_BACKOFFICE = "followup_backoffice_session_active";
+export const EVENEMENT_SESSION_BACKOFFICE_MODIFIEE = "followup:session-backoffice-modifiee";
 
 export class ErreurApi extends Error {
   constructor(
@@ -418,18 +466,64 @@ export class ErreurApi extends Error {
 }
 
 function obtenirJetonCsrf() {
-  return sessionStorage.getItem(CLE_CSRF) ?? "";
+  return localStorage.getItem(CLE_CSRF) ?? "";
 }
 
-export function enregistrerSession(reponse: Extract<ReponseAuthentification, { statut: "connecte" }>) {
-  sessionStorage.setItem(CLE_CSRF, reponse.jeton_csrf);
+function signalerSession(utilisateurId: string | null) {
+  if (typeof window === "undefined") return;
+  const signal = JSON.stringify({
+    utilisateur_id: utilisateurId,
+    date: Date.now(),
+    nonce: crypto.randomUUID(),
+  });
+  sessionStorage.setItem(CLE_SIGNAL_SESSION_ATTENDU, signal);
+  localStorage.setItem(CLE_SYNCHRONISATION_SESSION_BACKOFFICE, signal);
 }
 
-export function oublierSession() {
-  sessionStorage.removeItem(CLE_CSRF);
+export function sessionBackofficeDoitEtreSynchronisee(signal: string | null) {
+  return Boolean(signal) && signal !== sessionStorage.getItem(CLE_SIGNAL_SESSION_ATTENDU);
 }
 
-async function appeler<T>(chemin: string, options: RequestInit = {}): Promise<T> {
+export function enregistrerSession(
+  reponse: Extract<ReponseAuthentification, { statut: "connecte" }>,
+  diffuser = true,
+) {
+  localStorage.setItem(CLE_CSRF, reponse.jeton_csrf);
+  sessionStorage.setItem(CLE_UTILISATEUR_ATTENDU, reponse.utilisateur.id);
+  if (diffuser) signalerSession(reponse.utilisateur.id);
+  else {
+    const signal = localStorage.getItem(CLE_SYNCHRONISATION_SESSION_BACKOFFICE);
+    if (signal) sessionStorage.setItem(CLE_SIGNAL_SESSION_ATTENDU, signal);
+  }
+}
+
+export function oublierSession(diffuser = true) {
+  localStorage.removeItem(CLE_CSRF);
+  sessionStorage.removeItem(CLE_UTILISATEUR_ATTENDU);
+  sessionStorage.removeItem(CLE_SIGNAL_SESSION_ATTENDU);
+  if (diffuser) signalerSession(null);
+}
+
+async function renouvelerProtectionSession(): Promise<"identique" | "changee" | "impossible"> {
+  const utilisateurAttendu = sessionStorage.getItem(CLE_UTILISATEUR_ATTENDU);
+  const reponse = await fetch(`${URL_API}/backoffice/authentification/moi`, {
+    credentials: "include",
+  });
+  if (!reponse.ok) return "impossible";
+  const session = await reponse.json() as Extract<ReponseAuthentification, { statut: "connecte" }>;
+  enregistrerSession(session, false);
+  if (utilisateurAttendu && utilisateurAttendu !== session.utilisateur.id) {
+    window.dispatchEvent(new Event(EVENEMENT_SESSION_BACKOFFICE_MODIFIEE));
+    return "changee";
+  }
+  return "identique";
+}
+
+async function appeler<T>(
+  chemin: string,
+  options: RequestInit = {},
+  autoriserNouvelEssai = true,
+): Promise<T> {
   const entetes = new Headers(options.headers);
   const estFormulaire = typeof FormData !== "undefined" && options.body instanceof FormData;
   if (options.body && !estFormulaire) entetes.set("Content-Type", "application/json");
@@ -441,6 +535,16 @@ async function appeler<T>(chemin: string, options: RequestInit = {}): Promise<T>
     credentials: "include",
   });
   if (!reponse.ok) {
+    if (reponse.status === 403 && autoriserNouvelEssai && options.method && options.method !== "GET") {
+      const synchronisation = await renouvelerProtectionSession();
+      if (synchronisation === "identique") return appeler<T>(chemin, options, false);
+      if (synchronisation === "changee") {
+        throw new ErreurApi(
+          "La session active a changé dans un autre onglet. L’application va actualiser l’utilisateur connecté.",
+          409,
+        );
+      }
+    }
     let message = "Une erreur est survenue. Veuillez réessayer.";
     try {
       const corps = await reponse.json();
@@ -694,17 +798,51 @@ export const apiBackoffice = {
     contratId: string,
     entree: {
       numero_police: string | null;
+      numero_inscription: string | null;
+      numero_avenant: string | null;
       numero_attestation: string | null;
-      code_agence: string | null;
-      reseau_distribution: string | null;
-      code_apporteur: string | null;
+      numero_carte_rose: string | null;
+      nature_operation: string | null;
+      agence: string | null;
+      contact_agence: string | null;
+      reseau_code: string | null;
+      reseau_libelle: string | null;
+      apporteur_code: string | null;
+      apporteur_libelle: string | null;
+      branche: string | null;
+      numero_client: string | null;
+      civilite_souscripteur: string | null;
+      profession_souscripteur: string | null;
+      numero_contribuable: string | null;
+      numero_cni: string | null;
+      numero_assure: string | null;
+      profession_assure: string | null;
+      adresse_assure: string | null;
+      zone_tarification: string | null;
+      categorie_socioprofessionnelle: string | null;
+      type_conducteur: string | null;
+      date_premiere_mise_circulation: string | null;
+      charge_utile_kg: number | null;
+      valeur_neuve_xaf: number | null;
+      valeur_venale_xaf: number | null;
+      valeur_accessoires_xaf: number | null;
+      remorque_description: string | null;
       lieu_emission: string | null;
       date_emission: string | null;
+      heure_emission: string | null;
       date_effet: string;
       date_expiration: string;
+      reconduction: string | null;
+      details_garanties: LigneGarantiePolice[];
       prime_nette_xaf: number;
       accessoires_xaf: number;
+      fichier_asac_xaf: number;
       taxes_xaf: number;
+      carte_cemac_xaf: number;
+      dta_xaf: number;
+      autres_frais_xaf: number;
+      territoire_couverture: string | null;
+      nombre_exemplaires: number;
       observations: string | null;
     },
   ) {

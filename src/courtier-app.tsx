@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   Sparkles,
   Eye,
+  Trash2,
   TriangleAlert,
   Upload,
   UserCog,
@@ -63,7 +64,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
 import { Claim, DemoData, Opportunity, Policy, Proposal, companies, products, users } from "@/src/demo-data";
 import { PartenairesView } from "@/src/partenaires-view";
-import { apiBackoffice, ClientBackoffice, CompagniePartenaireResume, ContratAssuranceBackoffice, DetailDemandeClient, DetailSinistre, enregistrerSession, IntervenantDemande, MessageConversationBackoffice, MotifCorrectionDocument, OffreAssuranceBackoffice, oublierSession, PaiementCampayBackoffice, RapportActiviteBackoffice, ReponseAuthentification, ResumeDemandeClient, ResumeSinistre, RoleBackoffice, StatutBackoffice, StatutDemande, StatutSinistre, TableauDeBordBackoffice, UtilisateurBackoffice } from "@/src/services/api-backoffice";
+import { apiBackoffice, CLE_SYNCHRONISATION_SESSION_BACKOFFICE, ClientBackoffice, CompagniePartenaireResume, ContratAssuranceBackoffice, DetailDemandeClient, DetailSinistre, enregistrerSession, EVENEMENT_SESSION_BACKOFFICE_MODIFIEE, IntervenantDemande, LigneGarantiePolice, MessageConversationBackoffice, MotifCorrectionDocument, OffreAssuranceBackoffice, oublierSession, PaiementCampayBackoffice, RapportActiviteBackoffice, ReponseAuthentification, ResumeDemandeClient, ResumeSinistre, RoleBackoffice, sessionBackofficeDoitEtreSynchronisee, StatutBackoffice, StatutDemande, StatutSinistre, TableauDeBordBackoffice, UtilisateurBackoffice } from "@/src/services/api-backoffice";
 import { initialiserAlerteSonore, jouerAlerteSonore } from "@/src/services/notification-sound";
 
 const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XAF", maximumFractionDigits: 0 });
@@ -933,17 +934,51 @@ function ContratsReelsView({ utilisateur }: { utilisateur: UtilisateurBackoffice
   const [selection, setSelection] = useState<ContratAssuranceBackoffice | null>(null);
   const [operation, setOperation] = useState(false);
   const [numeroPolice, setNumeroPolice] = useState("");
+  const [numeroInscription, setNumeroInscription] = useState("");
+  const [numeroAvenant, setNumeroAvenant] = useState("");
   const [numeroAttestation, setNumeroAttestation] = useState("");
-  const [codeAgence, setCodeAgence] = useState("");
-  const [reseauDistribution, setReseauDistribution] = useState("");
-  const [codeApporteur, setCodeApporteur] = useState("");
+  const [numeroCarteRose, setNumeroCarteRose] = useState("");
+  const [natureOperation, setNatureOperation] = useState("Automobile - Affaire nouvelle");
+  const [agence, setAgence] = useState("");
+  const [contactAgence, setContactAgence] = useState("");
+  const [reseauCode, setReseauCode] = useState("");
+  const [reseauLibelle, setReseauLibelle] = useState("");
+  const [apporteurCode, setApporteurCode] = useState("");
+  const [apporteurLibelle, setApporteurLibelle] = useState("");
+  const [branche, setBranche] = useState("Automobile");
+  const [numeroClient, setNumeroClient] = useState("");
+  const [civiliteSouscripteur, setCiviliteSouscripteur] = useState("");
+  const [professionSouscripteur, setProfessionSouscripteur] = useState("");
+  const [numeroContribuable, setNumeroContribuable] = useState("");
+  const [numeroCni, setNumeroCni] = useState("");
+  const [numeroAssure, setNumeroAssure] = useState("");
+  const [professionAssure, setProfessionAssure] = useState("");
+  const [adresseAssure, setAdresseAssure] = useState("");
+  const [zoneTarification, setZoneTarification] = useState("");
+  const [categorieSocioprofessionnelle, setCategorieSocioprofessionnelle] = useState("");
+  const [typeConducteur, setTypeConducteur] = useState("");
+  const [datePremiereMiseCirculation, setDatePremiereMiseCirculation] = useState("");
+  const [chargeUtileKg, setChargeUtileKg] = useState(0);
+  const [valeurNeuve, setValeurNeuve] = useState(0);
+  const [valeurVenale, setValeurVenale] = useState(0);
+  const [valeurAccessoires, setValeurAccessoires] = useState(0);
+  const [remorqueDescription, setRemorqueDescription] = useState("");
   const [lieuEmission, setLieuEmission] = useState("");
   const [dateEmission, setDateEmission] = useState("");
+  const [heureEmission, setHeureEmission] = useState("");
   const [dateEffet, setDateEffet] = useState("");
   const [dateExpiration, setDateExpiration] = useState("");
+  const [reconduction, setReconduction] = useState("Tacite");
+  const [detailsGaranties, setDetailsGaranties] = useState<LigneGarantiePolice[]>([]);
   const [primeNette, setPrimeNette] = useState(0);
   const [accessoires, setAccessoires] = useState(0);
+  const [fichierAsac, setFichierAsac] = useState(0);
   const [taxes, setTaxes] = useState(0);
+  const [carteCemac, setCarteCemac] = useState(0);
+  const [dta, setDta] = useState(0);
+  const [autresFrais, setAutresFrais] = useState(0);
+  const [territoireCouverture, setTerritoireCouverture] = useState("");
+  const [nombreExemplaires, setNombreExemplaires] = useState(2);
   const [observations, setObservations] = useState("");
   const [fichierPolice, setFichierPolice] = useState<File | null>(null);
 
@@ -983,36 +1018,134 @@ function ContratsReelsView({ utilisateur }: { utilisateur: UtilisateurBackoffice
     const informations = contrat.informations_police ?? {};
     setSelection(contrat);
     setNumeroPolice(contrat.numero_police ?? "");
+    setNumeroInscription(informations.numero_inscription ?? "");
+    setNumeroAvenant(informations.numero_avenant ?? "");
     setNumeroAttestation(informations.numero_attestation ?? "");
-    setCodeAgence(informations.code_agence ?? "");
-    setReseauDistribution(informations.reseau_distribution ?? "");
-    setCodeApporteur(informations.code_apporteur ?? "");
+    setNumeroCarteRose(informations.numero_carte_rose ?? "");
+    setNatureOperation(informations.nature_operation ?? "Automobile - Affaire nouvelle");
+    setAgence(informations.agence ?? "");
+    setContactAgence(informations.contact_agence ?? "");
+    setReseauCode(informations.reseau_code ?? "");
+    setReseauLibelle(informations.reseau_libelle ?? "");
+    setApporteurCode(informations.apporteur_code ?? "");
+    setApporteurLibelle(informations.apporteur_libelle ?? "");
+    setBranche(informations.branche ?? "Automobile");
+    setNumeroClient(informations.numero_client ?? "");
+    setCiviliteSouscripteur(informations.civilite_souscripteur ?? "");
+    setProfessionSouscripteur(informations.profession_souscripteur ?? "");
+    setNumeroContribuable(informations.numero_contribuable ?? "");
+    setNumeroCni(informations.numero_cni ?? "");
+    setNumeroAssure(informations.numero_assure ?? "");
+    setProfessionAssure(informations.profession_assure ?? "");
+    setAdresseAssure(informations.adresse_assure ?? "");
+    setZoneTarification(informations.zone_tarification ?? "");
+    setCategorieSocioprofessionnelle(informations.categorie_socioprofessionnelle ?? "");
+    setTypeConducteur(informations.type_conducteur ?? "");
+    setDatePremiereMiseCirculation(informations.date_premiere_mise_circulation ?? "");
+    setChargeUtileKg(informations.charge_utile_kg ?? 0);
+    setValeurNeuve(informations.valeur_neuve_xaf ?? 0);
+    setValeurVenale(informations.valeur_venale_xaf ?? 0);
+    setValeurAccessoires(informations.valeur_accessoires_xaf ?? 0);
+    setRemorqueDescription(informations.remorque_description ?? "");
     setLieuEmission(informations.lieu_emission ?? "");
     setDateEmission(informations.date_emission ?? "");
+    setHeureEmission(informations.heure_emission ?? "");
     setDateEffet(contrat.date_effet);
     setDateExpiration(contrat.date_expiration);
+    setReconduction(informations.reconduction ?? "Tacite");
+    setDetailsGaranties(informations.details_garanties?.length ? informations.details_garanties : [...contrat.garanties, ...contrat.options].map((libelle, index) => ({
+      libelle,
+      capital_montant: null,
+      franchise: contrat.franchise_xaf > 0 ? money.format(contrat.franchise_xaf) : null,
+      annuite_xaf: null,
+      prime_periode_xaf: null,
+      reduction_xaf: 0,
+      prime_xaf: index === 0 ? contrat.prime_xaf : null,
+    })));
     setPrimeNette(informations.prime_nette_xaf ?? contrat.prime_xaf);
     setAccessoires(informations.accessoires_xaf ?? 0);
+    setFichierAsac(informations.fichier_asac_xaf ?? 0);
     setTaxes(informations.taxes_xaf ?? 0);
+    setCarteCemac(informations.carte_cemac_xaf ?? 0);
+    setDta(informations.dta_xaf ?? 0);
+    setAutresFrais(informations.autres_frais_xaf ?? 0);
+    setTerritoireCouverture(informations.territoire_couverture ?? "");
+    setNombreExemplaires(informations.nombre_exemplaires ?? 2);
     setObservations(informations.observations ?? "");
     setFichierPolice(null);
   };
 
   const entreePreparation = () => ({
     numero_police: numeroPolice.trim() || null,
+    numero_inscription: numeroInscription.trim() || null,
+    numero_avenant: numeroAvenant.trim() || null,
     numero_attestation: numeroAttestation.trim() || null,
-    code_agence: codeAgence.trim() || null,
-    reseau_distribution: reseauDistribution.trim() || null,
-    code_apporteur: codeApporteur.trim() || null,
+    numero_carte_rose: numeroCarteRose.trim() || null,
+    nature_operation: natureOperation.trim() || null,
+    agence: agence.trim() || null,
+    contact_agence: contactAgence.trim() || null,
+    reseau_code: reseauCode.trim() || null,
+    reseau_libelle: reseauLibelle.trim() || null,
+    apporteur_code: apporteurCode.trim() || null,
+    apporteur_libelle: apporteurLibelle.trim() || null,
+    branche: branche.trim() || null,
+    numero_client: numeroClient.trim() || null,
+    civilite_souscripteur: civiliteSouscripteur.trim() || null,
+    profession_souscripteur: professionSouscripteur.trim() || null,
+    numero_contribuable: numeroContribuable.trim() || null,
+    numero_cni: numeroCni.trim() || null,
+    numero_assure: numeroAssure.trim() || null,
+    profession_assure: professionAssure.trim() || null,
+    adresse_assure: adresseAssure.trim() || null,
+    zone_tarification: zoneTarification.trim() || null,
+    categorie_socioprofessionnelle: categorieSocioprofessionnelle.trim() || null,
+    type_conducteur: typeConducteur.trim() || null,
+    date_premiere_mise_circulation: datePremiereMiseCirculation || null,
+    charge_utile_kg: Math.max(0, chargeUtileKg) || null,
+    valeur_neuve_xaf: Math.max(0, valeurNeuve) || null,
+    valeur_venale_xaf: Math.max(0, valeurVenale) || null,
+    valeur_accessoires_xaf: Math.max(0, valeurAccessoires) || null,
+    remorque_description: remorqueDescription.trim() || null,
     lieu_emission: lieuEmission.trim() || null,
     date_emission: dateEmission || null,
+    heure_emission: heureEmission || null,
     date_effet: dateEffet,
     date_expiration: dateExpiration,
+    reconduction: reconduction.trim() || null,
+    details_garanties: detailsGaranties.map((ligne) => ({
+      ...ligne,
+      libelle: ligne.libelle.trim(),
+      capital_montant: ligne.capital_montant?.trim() || null,
+      franchise: ligne.franchise?.trim() || null,
+      reduction_xaf: Math.max(0, ligne.reduction_xaf),
+    })).filter((ligne) => ligne.libelle.length > 0),
     prime_nette_xaf: Math.max(0, primeNette),
     accessoires_xaf: Math.max(0, accessoires),
+    fichier_asac_xaf: Math.max(0, fichierAsac),
     taxes_xaf: Math.max(0, taxes),
+    carte_cemac_xaf: Math.max(0, carteCemac),
+    dta_xaf: Math.max(0, dta),
+    autres_frais_xaf: Math.max(0, autresFrais),
+    territoire_couverture: territoireCouverture.trim() || null,
+    nombre_exemplaires: Math.min(10, Math.max(1, nombreExemplaires)),
     observations: observations.trim() || null,
   });
+
+  const modifierGarantie = <K extends keyof LigneGarantiePolice>(index: number, cle: K, valeur: LigneGarantiePolice[K]) => {
+    setDetailsGaranties((courantes) => courantes.map((ligne, position) => position === index ? { ...ligne, [cle]: valeur } : ligne));
+  };
+
+  const ajouterGarantie = () => {
+    setDetailsGaranties((courantes) => [...courantes, {
+      libelle: "",
+      capital_montant: null,
+      franchise: null,
+      annuite_xaf: null,
+      prime_periode_xaf: null,
+      reduction_xaf: 0,
+      prime_xaf: null,
+    }]);
+  };
 
   const enregistrer = async () => {
     if (!selection) throw new Error("Aucun contrat sélectionné.");
@@ -1122,7 +1255,7 @@ function ContratsReelsView({ utilisateur }: { utilisateur: UtilisateurBackoffice
     </TableCard>}
 
     <Dialog open={Boolean(selection)} onOpenChange={(ouvert) => { if (!ouvert) fermer(); }}>
-      <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
+      <DialogContent className="max-h-[92vh] max-w-6xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Préparer la police du client</DialogTitle>
           <DialogDescription>Le projet reprend l’offre {selection?.offre_reference}. La police définitive doit porter les références de la compagnie et être déposée au format PDF.</DialogDescription>
@@ -1134,25 +1267,99 @@ function ContratsReelsView({ utilisateur }: { utilisateur: UtilisateurBackoffice
             <div><span className="text-muted-foreground">Franchise</span><strong className="block">{money.format(selection.franchise_xaf)}</strong></div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="grid gap-2"><Label>Numéro officiel de police *</Label><Input value={numeroPolice} onChange={(event) => setNumeroPolice(event.target.value)} placeholder="Attribué par la compagnie" /></div>
-            <div className="grid gap-2"><Label>Numéro d’attestation</Label><Input value={numeroAttestation} onChange={(event) => setNumeroAttestation(event.target.value)} /></div>
-            <div className="grid gap-2"><Label>Code agence</Label><Input value={codeAgence} onChange={(event) => setCodeAgence(event.target.value)} /></div>
-            <div className="grid gap-2"><Label>Réseau de distribution</Label><Input value={reseauDistribution} onChange={(event) => setReseauDistribution(event.target.value)} /></div>
-            <div className="grid gap-2"><Label>Code apporteur</Label><Input value={codeApporteur} onChange={(event) => setCodeApporteur(event.target.value)} /></div>
-            <div className="grid gap-2"><Label>Lieu d’émission</Label><Input value={lieuEmission} onChange={(event) => setLieuEmission(event.target.value)} /></div>
-            <div className="grid gap-2"><Label>Date d’émission</Label><Input type="date" value={dateEmission} onChange={(event) => setDateEmission(event.target.value)} /></div>
-            <div className="grid gap-2"><Label>Date d’effet *</Label><Input type="date" value={dateEffet} onChange={(event) => setDateEffet(event.target.value)} /></div>
-            <div className="grid gap-2"><Label>Date d’expiration *</Label><Input type="date" value={dateExpiration} onChange={(event) => setDateExpiration(event.target.value)} /></div>
-          </div>
+          <section className="grid gap-4 rounded-xl border p-4">
+            <div><p className="text-sm font-semibold">Références et émission</p><p className="text-xs text-muted-foreground">Informations attribuées par la compagnie et le réseau de distribution.</p></div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-2"><Label>Numéro officiel de police *</Label><Input value={numeroPolice} onChange={(event) => setNumeroPolice(event.target.value)} placeholder="Attribué par la compagnie" /></div>
+              <div className="grid gap-2"><Label>Numéro d’inscription</Label><Input value={numeroInscription} onChange={(event) => setNumeroInscription(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Numéro d’avenant</Label><Input value={numeroAvenant} onChange={(event) => setNumeroAvenant(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Numéro d’attestation</Label><Input value={numeroAttestation} onChange={(event) => setNumeroAttestation(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Numéro de carte rose</Label><Input value={numeroCarteRose} onChange={(event) => setNumeroCarteRose(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Nature de l’opération</Label><Input value={natureOperation} onChange={(event) => setNatureOperation(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Branche</Label><Input value={branche} onChange={(event) => setBranche(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Agence</Label><Input value={agence} onChange={(event) => setAgence(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Contact agence</Label><Input value={contactAgence} onChange={(event) => setContactAgence(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Code réseau</Label><Input value={reseauCode} onChange={(event) => setReseauCode(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Nom du réseau</Label><Input value={reseauLibelle} onChange={(event) => setReseauLibelle(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Code apporteur</Label><Input value={apporteurCode} onChange={(event) => setApporteurCode(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Nom de l’apporteur</Label><Input value={apporteurLibelle} onChange={(event) => setApporteurLibelle(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Lieu d’émission</Label><Input value={lieuEmission} onChange={(event) => setLieuEmission(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Date d’émission</Label><Input type="date" value={dateEmission} onChange={(event) => setDateEmission(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Heure d’émission</Label><Input type="time" value={heureEmission} onChange={(event) => setHeureEmission(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Date d’effet *</Label><Input type="date" value={dateEffet} onChange={(event) => setDateEffet(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Date d’expiration *</Label><Input type="date" value={dateExpiration} onChange={(event) => setDateExpiration(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Reconduction</Label><Input value={reconduction} onChange={(event) => setReconduction(event.target.value)} /></div>
+            </div>
+          </section>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="grid gap-2"><Label>Prime nette (FCFA)</Label><Input type="number" min={0} value={primeNette} onChange={(event) => setPrimeNette(Number(event.target.value))} /></div>
-            <div className="grid gap-2"><Label>Accessoires (FCFA)</Label><Input type="number" min={0} value={accessoires} onChange={(event) => setAccessoires(Number(event.target.value))} /></div>
-            <div className="grid gap-2"><Label>Taxes (FCFA)</Label><Input type="number" min={0} value={taxes} onChange={(event) => setTaxes(Number(event.target.value))} /></div>
-          </div>
-          <div className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-sm"><span>Total de la police</span><strong className="ml-2">{money.format(primeNette + accessoires + taxes)}</strong></div>
-          <div className="grid gap-2"><Label>Observations et clauses particulières</Label><Textarea value={observations} onChange={(event) => setObservations(event.target.value)} placeholder="Conditions particulières ou précisions utiles" /></div>
+          <section className="grid gap-4 rounded-xl border p-4">
+            <div><p className="text-sm font-semibold">Souscripteur et assuré</p><p className="text-xs text-muted-foreground">Complétez les identifiants administratifs qui ne figurent pas dans la demande du client.</p></div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-2"><Label>Numéro client</Label><Input value={numeroClient} onChange={(event) => setNumeroClient(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Civilité</Label><Input value={civiliteSouscripteur} onChange={(event) => setCiviliteSouscripteur(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Profession du souscripteur</Label><Input value={professionSouscripteur} onChange={(event) => setProfessionSouscripteur(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Numéro contribuable</Label><Input value={numeroContribuable} onChange={(event) => setNumeroContribuable(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>CNI / Passeport</Label><Input value={numeroCni} onChange={(event) => setNumeroCni(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Numéro assuré</Label><Input value={numeroAssure} onChange={(event) => setNumeroAssure(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Profession de l’assuré</Label><Input value={professionAssure} onChange={(event) => setProfessionAssure(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Adresse de l’assuré</Label><Input value={adresseAssure} onChange={(event) => setAdresseAssure(event.target.value)} /></div>
+            </div>
+          </section>
+
+          <section className="grid gap-4 rounded-xl border p-4">
+            <div><p className="text-sm font-semibold">Tarification et véhicule</p><p className="text-xs text-muted-foreground">Les caractéristiques déjà déclarées par le client sont reprises automatiquement dans le projet.</p></div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-2"><Label>Zone de tarification</Label><Input value={zoneTarification} onChange={(event) => setZoneTarification(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Catégorie socioprofessionnelle</Label><Input value={categorieSocioprofessionnelle} onChange={(event) => setCategorieSocioprofessionnelle(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Type de conducteur</Label><Input value={typeConducteur} onChange={(event) => setTypeConducteur(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Première mise en circulation</Label><Input type="date" value={datePremiereMiseCirculation} onChange={(event) => setDatePremiereMiseCirculation(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Charge utile (kg)</Label><Input type="number" min={0} value={chargeUtileKg} onChange={(event) => setChargeUtileKg(Number(event.target.value))} /></div>
+              <div className="grid gap-2"><Label>Valeur neuve (FCFA)</Label><Input type="number" min={0} value={valeurNeuve} onChange={(event) => setValeurNeuve(Number(event.target.value))} /></div>
+              <div className="grid gap-2"><Label>Valeur vénale (FCFA)</Label><Input type="number" min={0} value={valeurVenale} onChange={(event) => setValeurVenale(Number(event.target.value))} /></div>
+              <div className="grid gap-2"><Label>Valeur des accessoires (FCFA)</Label><Input type="number" min={0} value={valeurAccessoires} onChange={(event) => setValeurAccessoires(Number(event.target.value))} /></div>
+              <div className="grid gap-2 lg:col-span-2"><Label>Remorque</Label><Input value={remorqueDescription} onChange={(event) => setRemorqueDescription(event.target.value)} placeholder="Sans remorque ou description" /></div>
+            </div>
+          </section>
+
+          <section className="grid gap-4 rounded-xl border p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">Garanties souscrites</p><p className="text-xs text-muted-foreground">Renseignez les capitaux, franchises et prix exactement comme sur le barème de la compagnie.</p></div><Button type="button" size="sm" variant="outline" onClick={ajouterGarantie}><Plus />Ajouter une garantie</Button></div>
+            <div className="grid gap-3">
+              {detailsGaranties.map((ligne, index) => <div key={index} className="grid gap-2 rounded-lg border p-3 md:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_.8fr_.8fr_.8fr_.8fr_auto]">
+                <div className="grid gap-1"><Label>Garantie</Label><Input value={ligne.libelle} onChange={(event) => modifierGarantie(index, "libelle", event.target.value)} /></div>
+                <div className="grid gap-1"><Label>Capital / montant</Label><Input value={ligne.capital_montant ?? ""} onChange={(event) => modifierGarantie(index, "capital_montant", event.target.value || null)} /></div>
+                <div className="grid gap-1"><Label>Franchise</Label><Input value={ligne.franchise ?? ""} onChange={(event) => modifierGarantie(index, "franchise", event.target.value || null)} /></div>
+                <div className="grid gap-1"><Label>Annuité</Label><Input type="number" min={0} value={ligne.annuite_xaf ?? ""} onChange={(event) => modifierGarantie(index, "annuite_xaf", event.target.value ? Number(event.target.value) : null)} /></div>
+                <div className="grid gap-1"><Label>Prime période</Label><Input type="number" min={0} value={ligne.prime_periode_xaf ?? ""} onChange={(event) => modifierGarantie(index, "prime_periode_xaf", event.target.value ? Number(event.target.value) : null)} /></div>
+                <div className="grid gap-1"><Label>Réduction</Label><Input type="number" min={0} value={ligne.reduction_xaf} onChange={(event) => modifierGarantie(index, "reduction_xaf", Number(event.target.value))} /></div>
+                <div className="grid gap-1"><Label>Prime</Label><Input type="number" min={0} value={ligne.prime_xaf ?? ""} onChange={(event) => modifierGarantie(index, "prime_xaf", event.target.value ? Number(event.target.value) : null)} /></div>
+                <Button type="button" size="icon" variant="ghost" className="self-end" aria-label="Supprimer cette garantie" onClick={() => setDetailsGaranties((courantes) => courantes.filter((_, position) => position !== index))}><Trash2 /></Button>
+              </div>)}
+              {detailsGaranties.length === 0 && <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Ajoutez au moins une garantie pour reproduire le tableau du proforma.</p>}
+            </div>
+          </section>
+
+          <section className="grid gap-4 rounded-xl border p-4">
+            <div><p className="text-sm font-semibold">Décomposition de la prime</p><p className="text-xs text-muted-foreground">La prime TTC est calculée à partir de toutes les rubriques du proforma.</p></div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-2"><Label>Prime nette (FCFA)</Label><Input type="number" min={0} value={primeNette} onChange={(event) => setPrimeNette(Number(event.target.value))} /></div>
+              <div className="grid gap-2"><Label>Accessoires (FCFA)</Label><Input type="number" min={0} value={accessoires} onChange={(event) => setAccessoires(Number(event.target.value))} /></div>
+              <div className="grid gap-2"><Label>Fichier ASAC (FCFA)</Label><Input type="number" min={0} value={fichierAsac} onChange={(event) => setFichierAsac(Number(event.target.value))} /></div>
+              <div className="grid gap-2"><Label>Taxes (FCFA)</Label><Input type="number" min={0} value={taxes} onChange={(event) => setTaxes(Number(event.target.value))} /></div>
+              <div className="grid gap-2"><Label>Carte CEMAC (FCFA)</Label><Input type="number" min={0} value={carteCemac} onChange={(event) => setCarteCemac(Number(event.target.value))} /></div>
+              <div className="grid gap-2"><Label>DTA (FCFA)</Label><Input type="number" min={0} value={dta} onChange={(event) => setDta(Number(event.target.value))} /></div>
+              <div className="grid gap-2"><Label>Autres frais (FCFA)</Label><Input type="number" min={0} value={autresFrais} onChange={(event) => setAutresFrais(Number(event.target.value))} /></div>
+            </div>
+            <div className="rounded-lg border bg-muted/40 p-3 text-sm"><span>Prime TTC</span><strong className="ml-2">{money.format(primeNette + accessoires + fichierAsac + taxes + carteCemac + dta + autresFrais)}</strong></div>
+          </section>
+
+          <section className="grid gap-4 rounded-xl border p-4">
+            <div><p className="text-sm font-semibold">Clauses et exemplaires</p></div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2"><Label>Territoire de couverture</Label><Textarea value={territoireCouverture} onChange={(event) => setTerritoireCouverture(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Observations et clauses particulières</Label><Textarea value={observations} onChange={(event) => setObservations(event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Nombre d’exemplaires</Label><Input type="number" min={1} max={10} value={nombreExemplaires} onChange={(event) => setNombreExemplaires(Number(event.target.value))} /></div>
+            </div>
+          </section>
 
           <div className="grid gap-3 rounded-xl border p-4">
             <div><Label>Police officielle PDF *</Label><p className="mt-1 text-sm text-muted-foreground">Déposez uniquement le document émis, signé ou cacheté par la compagnie.</p></div>
@@ -1297,6 +1504,46 @@ export function CourtierApp() {
   useEffect(()=>{let actif=true;apiBackoffice.obtenirSession().then((reponse)=>{if(!actif)return;idsNotificationsRef.current.clear();setNotificationsBackoffice([]);enregistrerSession(reponse);setUtilisateurConnecte(reponse.utilisateur);}).catch(()=>{if(actif){oublierSession();setUtilisateurConnecte(null);}});return()=>{actif=false};},[]);
 
   const utilisateurConnecteId=utilisateurConnecte?.id;
+  useEffect(()=>{
+    let actif=true;
+    let synchronisationEnCours=false;
+    const synchroniser=async(avertir:boolean)=>{
+      if(synchronisationEnCours)return;
+      synchronisationEnCours=true;
+      try{
+        const reponse=await apiBackoffice.obtenirSession();
+        if(!actif)return;
+        const utilisateurChange=Boolean(utilisateurConnecteId&&utilisateurConnecteId!==reponse.utilisateur.id);
+        enregistrerSession(reponse,false);
+        setUtilisateurConnecte(reponse.utilisateur);
+        if(avertir&&utilisateurChange)toast.warning(`Une autre connexion a remplacé cette session. L’écran affiche maintenant ${reponse.utilisateur.nom_complet}.`);
+      }catch{
+        if(!actif)return;
+        oublierSession(false);
+        setUtilisateurConnecte(null);
+        if(avertir)toast.warning("La session backoffice a changé dans un autre onglet. Reconnectez-vous pour continuer.");
+      }finally{
+        synchronisationEnCours=false;
+      }
+    };
+    const changementStockage=(event:StorageEvent)=>{
+      if(event.key!==CLE_SYNCHRONISATION_SESSION_BACKOFFICE||!sessionBackofficeDoitEtreSynchronisee(event.newValue))return;
+      void synchroniser(true);
+    };
+    const retourOnglet=()=>void synchroniser(true);
+    const changementVisibilite=()=>{if(document.visibilityState==="visible")void synchroniser(true);};
+    window.addEventListener("storage",changementStockage);
+    window.addEventListener("focus",retourOnglet);
+    window.addEventListener(EVENEMENT_SESSION_BACKOFFICE_MODIFIEE,retourOnglet);
+    document.addEventListener("visibilitychange",changementVisibilite);
+    return()=>{
+      actif=false;
+      window.removeEventListener("storage",changementStockage);
+      window.removeEventListener("focus",retourOnglet);
+      window.removeEventListener(EVENEMENT_SESSION_BACKOFFICE_MODIFIEE,retourOnglet);
+      document.removeEventListener("visibilitychange",changementVisibilite);
+    };
+  },[utilisateurConnecteId]);
   useEffect(()=>{if(!utilisateurConnecteId)return;let actif=true;const lues=lireNotificationsLues(utilisateurConnecteId);apiBackoffice.listerDemandes({statut:"nouvelle"}).then((demandes)=>{if(!actif)return;setNouvellesDemandes(demandes.length);const ajouts=demandes.map((demande)=>notificationDemande(demande,lues));ajouts.forEach((notification)=>idsNotificationsRef.current.add(notification.id));setNotificationsBackoffice((courantes)=>fusionnerNotifications(courantes,ajouts));}).catch(()=>undefined);const flux=apiBackoffice.creerFluxDemandes();const evenementDemande=(evenement:Event)=>{if(!actif)return;let donnees:{type?:string;reference?:string;sous_type?:string;produit?:string;offre_reference?:string}={};try{donnees=JSON.parse((evenement as MessageEvent<string>).data)??{};}catch{donnees={};}setVersionDemandes((version)=>version+1);if(donnees.type==="documents_client_modifies")setVersionSinistres((version)=>version+1);if(donnees.type==="offre_selectionnee"&&donnees.reference&&donnees.offre_reference){void jouerAlerteSonore();toast.info(`Le client a choisi l’offre ${donnees.offre_reference}.`,{action:{label:"Ouvrir le dossier",onClick:()=>ouvrirDemande(donnees.reference!)}});}if(donnees.type==="nouvelle_demande"){setNouvellesDemandes((total)=>total+1);const reference=donnees.reference??`nouvelle-${Date.now()}`;const produit=donnees.produit==="automobile"?(donnees.sous_type==="moto_deux_trois_roues"?"moto":"automobile"):(donnees.produit??"assurance").replaceAll("_"," ");const notification:NotificationBackoffice={id:`demande:${reference}`,type:"demande",titre:"Nouvelle demande client",message:`Une nouvelle demande ${produit} vient d’être transmise.`,date:new Date().toISOString(),reference,lue:false};if(!idsNotificationsRef.current.has(notification.id)){idsNotificationsRef.current.add(notification.id);setNotificationsBackoffice((courantes)=>fusionnerNotifications(courantes,[notification]));void jouerAlerteSonore();}toast.info("Une nouvelle demande client vient d’être reçue.",{action:{label:"Consulter",onClick:()=>ouvrirDemande(reference)}});}};flux.addEventListener("demande",evenementDemande);return()=>{actif=false;flux.removeEventListener("demande",evenementDemande);flux.close();};},[utilisateurConnecteId]);
   useEffect(()=>{if(!utilisateurConnecteId)return;let actif=true;const flux=apiBackoffice.creerFluxMessages();const recevoir=(evenement:Event)=>{if(!actif)return;try{const donnees=JSON.parse((evenement as MessageEvent<string>).data) as {message_id?:string;demande_reference?:string;type_auteur?:string};if(donnees.type_auteur!=="client"||!donnees.message_id||!donnees.demande_reference)return;const notification:NotificationBackoffice={id:`message:${donnees.message_id}`,type:"demande",titre:"Nouveau message client",message:`Le client a écrit au sujet du dossier ${donnees.demande_reference}.`,date:new Date().toISOString(),reference:donnees.demande_reference,lue:false};if(!idsNotificationsRef.current.has(notification.id)){idsNotificationsRef.current.add(notification.id);setNotificationsBackoffice((courantes)=>fusionnerNotifications(courantes,[notification]));void jouerAlerteSonore();}toast.info("Un client vient de vous envoyer un message.",{action:{label:"Ouvrir",onClick:()=>ouvrirDemande(donnees.demande_reference!)}});}catch{}};flux.addEventListener("message",recevoir);return()=>{actif=false;flux.removeEventListener("message",recevoir);flux.close();};},[utilisateurConnecteId]);
   useEffect(()=>{if(!utilisateurConnecteId)return;let actif=true;const lues=lireNotificationsLues(utilisateurConnecteId);apiBackoffice.listerSinistres({statut:"declare"}).then((sinistres)=>{if(!actif)return;setNouveauxSinistres(sinistres.length);const ajouts=sinistres.map((sinistre)=>notificationSinistre(sinistre,lues));ajouts.forEach((notification)=>idsNotificationsRef.current.add(notification.id));setNotificationsBackoffice((courantes)=>fusionnerNotifications(courantes,ajouts));}).catch(()=>undefined);const flux=apiBackoffice.creerFluxSinistres();const evenementSinistre=(evenement:Event)=>{if(!actif)return;let donnees:{type?:string;reference?:string}={};try{donnees=JSON.parse((evenement as MessageEvent<string>).data)??{};}catch{donnees={};}setVersionSinistres((version)=>version+1);if(donnees.type==="nouveau_sinistre"){setNouveauxSinistres((total)=>total+1);const reference=donnees.reference??`sinistre-${Date.now()}`;const notification:NotificationBackoffice={id:`sinistre:${reference}`,type:"sinistre",titre:"Nouveau sinistre déclaré",message:"Un client vient de transmettre une nouvelle déclaration de sinistre.",date:new Date().toISOString(),reference,lue:false};if(!idsNotificationsRef.current.has(notification.id)){idsNotificationsRef.current.add(notification.id);setNotificationsBackoffice((courantes)=>fusionnerNotifications(courantes,[notification]));void jouerAlerteSonore();}toast.info("Un nouveau sinistre vient d’être déclaré.",{action:{label:"Consulter",onClick:()=>ouvrirSinistre(reference)}});}};flux.addEventListener("sinistre",evenementSinistre);return()=>{actif=false;flux.removeEventListener("sinistre",evenementSinistre);flux.close();};},[utilisateurConnecteId]);
