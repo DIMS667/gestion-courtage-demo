@@ -105,6 +105,24 @@ export type OffreAssuranceBackoffice = {
   cree_le: string;
 };
 
+export type LigneTarificationOffre = {
+  code?: string | null;
+  libelle: string;
+  prime_xaf: number;
+  annuite_xaf?: number | null;
+  capital_montant?: string | null;
+  franchise?: string | null;
+};
+
+export type TarificationOffre = {
+  garanties_detail: LigneTarificationOffre[];
+  accessoires_xaf: number;
+  fichier_asac_xaf: number;
+  carte_cemac_xaf: number;
+  dta_xaf: number;
+  autres_frais_xaf: number;
+};
+
 export type CompagniePartenaireResume = {
   id: string;
   code: string;
@@ -751,6 +769,7 @@ export const apiBackoffice = {
     documents_requis: string[];
     recommandee: boolean;
     conseil: string;
+    tarification?: TarificationOffre;
   }) {
     return appeler<OffreAssuranceBackoffice>(
       `/backoffice/demandes-clients/${encodeURIComponent(reference)}/offres`,
@@ -762,6 +781,20 @@ export const apiBackoffice = {
     return appeler<OffreAssuranceBackoffice[]>(
       `/backoffice/demandes-clients/${encodeURIComponent(reference)}/offres/transmission`,
       { method: "POST", body: JSON.stringify({ offre_ids: offreIds }) },
+    );
+  },
+
+  genererOffresDemande(reference: string) {
+    return appeler<OffreAssuranceBackoffice[]>(
+      `/backoffice/demandes-clients/${encodeURIComponent(reference)}/offres/generation`,
+      { method: "POST" },
+    );
+  },
+
+  finaliserTarificationOffre(reference: string, offreId: string, entree: TarificationOffre) {
+    return appeler<OffreAssuranceBackoffice>(
+      `/backoffice/demandes-clients/${encodeURIComponent(reference)}/offres/${encodeURIComponent(offreId)}/tarification`,
+      { method: "PUT", body: JSON.stringify(entree) },
     );
   },
 

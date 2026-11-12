@@ -64,7 +64,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
 import { Claim, DemoData, Opportunity, Policy, Proposal, companies, products, users } from "@/src/demo-data";
 import { PartenairesView } from "@/src/partenaires-view";
-import { apiBackoffice, CLE_SYNCHRONISATION_SESSION_BACKOFFICE, ClientBackoffice, CompagniePartenaireResume, ContratAssuranceBackoffice, DetailDemandeClient, DetailSinistre, enregistrerSession, EVENEMENT_SESSION_BACKOFFICE_MODIFIEE, IntervenantDemande, LigneGarantiePolice, MessageConversationBackoffice, MotifCorrectionDocument, OffreAssuranceBackoffice, oublierSession, PaiementCampayBackoffice, RapportActiviteBackoffice, ReponseAuthentification, ResumeDemandeClient, ResumeSinistre, RoleBackoffice, sessionBackofficeDoitEtreSynchronisee, StatutBackoffice, StatutDemande, StatutSinistre, TableauDeBordBackoffice, UtilisateurBackoffice } from "@/src/services/api-backoffice";
+import { apiBackoffice, CLE_SYNCHRONISATION_SESSION_BACKOFFICE, ClientBackoffice, CompagniePartenaireResume, ContratAssuranceBackoffice, DetailDemandeClient, DetailSinistre, enregistrerSession, EVENEMENT_SESSION_BACKOFFICE_MODIFIEE, IntervenantDemande, LigneGarantiePolice, LigneTarificationOffre, MessageConversationBackoffice, MotifCorrectionDocument, OffreAssuranceBackoffice, oublierSession, PaiementCampayBackoffice, RapportActiviteBackoffice, ReponseAuthentification, ResumeDemandeClient, ResumeSinistre, RoleBackoffice, sessionBackofficeDoitEtreSynchronisee, StatutBackoffice, StatutDemande, StatutSinistre, TableauDeBordBackoffice, UtilisateurBackoffice } from "@/src/services/api-backoffice";
 import { initialiserAlerteSonore, jouerAlerteSonore } from "@/src/services/notification-sound";
 
 const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XAF", maximumFractionDigits: 0 });
@@ -399,7 +399,7 @@ const libellesChamps:Record<string,string>={
   point_of_sale:"Point de vente",policy_effective_date:"Prise d’effet du contrat",policy_expiry_date:"Échéance du contrat",accident_time:"Heure de l’accident",insured:"Assuré",insured_driver:"Conducteur du véhicule assuré",adverse_party_involved:"Tiers impliqué",adversary:"Tiers",adversary_driver:"Conducteur du véhicule adverse",insured_vehicle:"Véhicule assuré",adverse_vehicle:"Véhicule adverse",circumstances:"Circonstances",impact_point_a:"Point de choc du véhicule A",impact_point_b:"Point de choc du véhicule B",damage_description_a:"Dommages du véhicule A",damage_description_b:"Dommages du véhicule B",narrative:"Récit de l’accident",injuries_in_vehicle:"Blessés dans le véhicule assuré",other_injuries:"Autres personnes blessées",witnesses:"Témoins",attested_at:"Déclaration certifiée le",
   last_name:"Nom",first_names:"Prénoms",phone:"Téléphone",email:"Adresse e-mail",age:"Âge",relationship:"Lien avec l’assuré",licence_number:"Numéro de permis",licence_category:"Catégorie du permis",licence_issued_on:"Permis délivré le",licence_issued_at:"Lieu de délivrance du permis",licence_valid_until:"Permis valide jusqu’au",capacity_certificate_number:"Numéro du certificat de capacité",capacity_certificate_issued_on:"Certificat délivré le",capacity_certificate_issued_at:"Lieu de délivrance du certificat",capacity_certificate_valid_until:"Certificat valide jusqu’au",type:"Type",brand:"Marque",registration:"Immatriculation",first_registration_date:"Première mise en circulation",technical_inspection_valid_until:"Visite technique valide jusqu’au",insurer:"Assureur",broker:"Courtier ou agence",policy_number:"Numéro de police",code:"Numéro",label:"Situation",vehicle_a:"Véhicule A",vehicle_b:"Véhicule B",name:"Nom et prénoms",injuries:"Blessures",hospital:"Établissement de soins",admission_date:"Date d’admission"
 };
-const libellesValeurs:Record<string,string>={nouveau_vehicule:"Nouveau véhicule",renouvellement:"Renouvellement",autre:"Autre besoin",essence:"Essence",diesel:"Diesel",electrique:"Électrique",recu:"Reçu",en_verification:"En vérification",valide:"Validé",correction_requise:"À remplacer",cat1_professionnel:"CAT1 · Usage professionnel",cat2_transport_produits:"CAT2 · Transport de produits",cat3_transport_marchandises_tiers:"CAT3 · Transport de marchandises appartenant à des tiers",cat5:"CAT5 · Véhicule motorisé à deux ou trois roues",cat5_bis:"CAT5 BIS · Transport payant de passagers",responsabilite_civile:"Responsabilité civile",defense_et_recours:"Défense et recours",ipt:"IPT",bris_glaces_tous_risques:"Bris de glaces en tous risques",bris_glaces_hors_tous_risques:"Bris de glaces hors tous risques",bris_glaces_blocs_feux:"Bris de glaces et blocs-feux",tierce_collision:"Tierce collision",dommages_tous_accidents:"Dommages tous accidents",incendie:"Incendie",incendie_risques_electriques:"Incendie et risques électriques",vol_braquage:"Vol et braquage",vol_total:"Vol total",vol_total_partiel:"Vol total ou partiel",assistance_reparation:"Assistance à réparation",avance_sur_recours:"Avance sur recours"};
+const libellesValeurs:Record<string,string>={nouveau_vehicule:"Nouveau véhicule",renouvellement:"Renouvellement",autre:"Autre besoin",essence:"Essence",diesel:"Diesel",electrique:"Électrique",recu:"Reçu",en_verification:"En vérification",valide:"Validé",correction_requise:"À remplacer",cat1_professionnel:"CAT1 · Usage professionnel",cat2_transport_produits:"CAT2 · Transport de produits",cat3_transport_marchandises_tiers:"CAT3 · Transport de marchandises appartenant à des tiers",cat4b_transport_urbain:"CAT4 B · Transport urbain payant de voyageurs",cat4c_transport_personnel_eleves:"CAT4 C · Transport du personnel et des élèves",cat7_enseignement_conduite:"CAT7 · Enseignement de la conduite",cat8_location:"CAT8 · Location avec ou sans chauffeur",cat9_engins_chantier:"CAT9 · Engins mobiles de chantier",cat10a_vehicules_speciaux:"CAT10 A · Véhicules spéciaux",cat10b_collectivites_publiques:"CAT10 B · Véhicules des collectivités publiques",cat10c_tracteurs_agricoles_forestiers:"CAT10 C · Tracteurs agricoles ou forestiers",cat5:"CAT5 · Véhicule motorisé à deux ou trois roues",cat5_bis:"CAT5 BIS · Transport payant de passagers",responsabilite_civile:"Responsabilité civile",defense_et_recours:"Défense et recours",ipt:"IPT",bris_glaces_tous_risques:"Bris de glaces en tous risques",bris_glaces_hors_tous_risques:"Bris de glaces hors tous risques",bris_glaces_blocs_feux:"Bris de glaces et blocs-feux",tierce_collision:"Tierce collision",dommages_tous_accidents:"Dommages tous accidents",incendie:"Incendie",incendie_risques_electriques:"Incendie et risques électriques",vol_braquage:"Vol et braquage",vol_total:"Vol total",vol_total_partiel:"Vol total ou partiel",assistance_reparation:"Assistance à réparation",avance_sur_recours:"Avance sur recours"};
 const normaliserChamp=(champ:string)=>champ.replace(/([a-z0-9])([A-Z])/g,"$1_$2").toLowerCase();
 const libelleChamp=(champ:string)=>{const normalise=normaliserChamp(champ);return libellesChamps[normalise]??normalise.replaceAll("_"," ").replace(/^./,(lettre)=>lettre.toUpperCase());};
 const objetDemande=(valeur:unknown):Record<string,unknown>=>typeof valeur==="object"&&valeur!==null&&!Array.isArray(valeur)?valeur as Record<string,unknown>:{};
@@ -567,11 +567,20 @@ const libellesDetailCalcul: Record<string, string> = {
   majoration_risque_xaf: "Ajustement du risque",
   prime_avant_plafond_xaf: "Prime calculée",
   prime_totale_xaf: "Prime totale",
+  prime_nette_xaf: "Prime nette (garanties)",
+  accessoires_xaf: "Accessoires",
+  fichier_asac_xaf: "Fichier ASAC",
+  base_taxe_xaf: "Base taxable",
+  taxes_xaf: "Taxe (19,25 %)",
+  carte_cemac_xaf: "Carte CEMAC",
+  dta_xaf: "DTA",
+  autres_frais_xaf: "Autres frais",
+  prime_ttc_xaf: "Total TTC",
 };
 
 const libelleCode = (valeur: string | null | undefined) => {
   if (!valeur) return "Non renseignée";
-  if (valeur === "test_campay_auto") return "Tarification automobile de test";
+  if (valeur === "royal_onyx_auto" || valeur === "royal_onyx_auto_v1") return "Tarification automobile Royal Onyx";
   if (valeur === "bcare_v1") return "Tarification santé B-Care";
   return valeur.replaceAll("_", " ").replace(/\b\w/g, (lettre) => lettre.toUpperCase());
 };
@@ -618,7 +627,7 @@ const composantesBcare = [
   ["tva_majoration_xaf", "TVA sur la majoration"],
 ] as const;
 
-function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSelectionEnvoi }: { offre: OffreAssuranceBackoffice; peutTransmettre:boolean; selectionneePourEnvoi: boolean; onSelectionEnvoi: (offreId:string, selectionnee:boolean)=>void }) {
+function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSelectionEnvoi, onCompleter }: { offre: OffreAssuranceBackoffice; peutTransmettre:boolean; selectionneePourEnvoi: boolean; onSelectionEnvoi: (offreId:string, selectionnee:boolean)=>void; onCompleter:(offre:OffreAssuranceBackoffice)=>void }) {
   const automatique = offre.origine === "automatique";
   const brouillonAutomatique = automatique && !offre.transmise;
   const lignesCalcul = lignesDetailCalcul(offre.detail_calcul);
@@ -626,6 +635,7 @@ function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSe
   const beneficiairesBcare = lireListeObjetsCalcul(offre.detail_calcul, "beneficiaires");
   const bareme = lireTexteCalcul(offre.detail_calcul, "bareme_code") ?? offre.bareme_id;
   const moteur = lireTexteCalcul(offre.detail_calcul, "moteur");
+  const calculIncomplet = offre.detail_calcul.calcul_complet === false;
 
   return (
     <article className={`overflow-hidden rounded-xl border ${brouillonAutomatique ? "border-amber-300 bg-amber-50/40" : automatique ? "border-blue-200 bg-blue-50/30" : "bg-background"}`}>
@@ -651,17 +661,18 @@ function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSe
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
           <StatusBadge value={offre.selectionnee ? "Sélectionnée" : offre.transmise ? "Envoyée au client" : "Brouillon"} />
-          {brouillonAutomatique && peutTransmettre && (
+          {brouillonAutomatique && peutTransmettre && !calculIncomplet && (
             <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium shadow-sm">
               <input type="checkbox" checked={selectionneePourEnvoi} onChange={(event)=>onSelectionEnvoi(offre.id,event.target.checked)} />
               Sélectionner pour l’envoi
             </label>
           )}
+          {brouillonAutomatique && peutTransmettre && calculIncomplet && <Button size="sm" onClick={()=>onCompleter(offre)}>Compléter le calcul</Button>}
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-px border-y bg-border sm:grid-cols-4">
-        <div className="bg-background p-3"><span className="block text-xs text-muted-foreground">Prime proposée</span><strong className="mt-1 block text-base">{money.format(offre.prime_xaf)}</strong></div>
+        <div className="bg-background p-3"><span className="block text-xs text-muted-foreground">{calculIncomplet?"Prime nette provisoire":"Total TTC"}</span><strong className="mt-1 block text-base">{money.format(offre.prime_xaf)}</strong></div>
         <div className="bg-background p-3"><span className="block text-xs text-muted-foreground">Durée</span><strong className="mt-1 block text-sm">{offre.duree_mois} mois</strong></div>
         <div className="bg-background p-3"><span className="block text-xs text-muted-foreground">Date d’effet</span><strong className="mt-1 block text-sm">{displayDate(offre.date_effet)}</strong></div>
         <div className="bg-background p-3"><span className="block text-xs text-muted-foreground">Franchise</span><strong className="mt-1 block text-sm">{money.format(offre.franchise_xaf)}</strong></div>
@@ -694,10 +705,10 @@ function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSe
             <div className="divide-y">
               {garantiesTarifees.map((garantie,index) => {
                 const libelle=typeof garantie.libelle==="string"?garantie.libelle:`Garantie ${index+1}`;
-                const type=garantie.type==="obligatoire_incluse"?"Obligatoire · incluse":"Optionnelle";
-                const montant=lireNombreCalcul(garantie,"montant_xaf")??0;
+                const type=garantie.statut_calcul==="a_completer"?"À compléter":garantie.type==="obligatoire_incluse"?"Obligatoire · incluse":"Calculée";
+                const montant=lireNombreCalcul(garantie,"prime_xaf")??lireNombreCalcul(garantie,"montant_xaf");
                 const note=typeof garantie.note==="string"?garantie.note:"";
-                return <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 px-3 py-3 text-sm" key={`${String(garantie.code??libelle)}-${index}`}><div><strong className="block">{libelle}</strong><span className="text-xs text-muted-foreground">{type}{note?` · ${note}`:""}</span></div><strong className="whitespace-nowrap text-right">{money.format(montant)}</strong></div>;
+                return <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 px-3 py-3 text-sm" key={`${String(garantie.code??libelle)}-${index}`}><div><strong className="block">{libelle}</strong><span className="text-xs text-muted-foreground">{type}{note?` · ${note}`:""}</span></div><strong className="whitespace-nowrap text-right">{montant===null?"À saisir":money.format(montant)}</strong></div>;
               })}
             </div>
           </div>
@@ -750,13 +761,33 @@ function OffresDemandePanel({ reference, statutDemande, peutCreer, version, onAc
   const [selectionEnvoi,setSelectionEnvoi]=useState<string[]>([]);
   const [transmission,setTransmission]=useState(false);
   const [preparationContrat,setPreparationContrat]=useState(false);
-  const [formulaire,setFormulaire]=useState({compagnieId:"",prime:"",duree:"12",dateEffet:"",franchise:"0",garanties:"",options:"",exclusions:"",documents:"",recommandee:true,conseil:""});
+  const [generation,setGeneration]=useState(false);
+  const [offreACompleter,setOffreACompleter]=useState<OffreAssuranceBackoffice|null>(null);
+  const [lignesTarification,setLignesTarification]=useState<LigneTarificationOffre[]>([]);
+  const [fraisTarification,setFraisTarification]=useState({accessoires:"0",asac:"0",cemac:"0",dta:"0",autres:"0"});
+  const [finalisation,setFinalisation]=useState(false);
+  const [formulaire,setFormulaire]=useState({compagnieId:"",prime:"",duree:"12",dateEffet:"",franchise:"0",garanties:"",accessoires:"0",asac:"0",cemac:"0",dta:"0",autres:"0",options:"",exclusions:"",documents:"",recommandee:true,conseil:""});
 
   const charger=async()=>{try{setOffres(await apiBackoffice.listerOffresDemande(reference));setSelectionEnvoi([]);}catch(cause){toast.error(cause instanceof Error?cause.message:"Impossible de charger les offres.");}finally{setChargement(false);}};
   useEffect(()=>{let actif=true;apiBackoffice.listerOffresDemande(reference).then((liste)=>{if(actif){setOffres(liste);setSelectionEnvoi([]);}}).catch((cause)=>{if(actif)toast.error(cause instanceof Error?cause.message:"Impossible de charger les offres.");}).finally(()=>{if(actif)setChargement(false);});return()=>{actif=false};},[reference,version]);
   useEffect(()=>{let actif=true;apiBackoffice.listerPartenaires().then((liste)=>{if(actif)setCompagnies(liste.filter((compagnie)=>compagnie.statut==="active"));}).catch((cause)=>{if(actif)toast.error(cause instanceof Error?cause.message:"Impossible de charger les compagnies.");});return()=>{actif=false};},[]);
   const modifier=(champ:keyof typeof formulaire,valeur:string|boolean)=>setFormulaire((courant)=>({...courant,[champ]:valeur}));
   const modifierSelectionEnvoi=(offreId:string,selectionnee:boolean)=>setSelectionEnvoi((courante)=>selectionnee?[...courante,offreId]:courante.filter((id)=>id!==offreId));
+  const generer=async()=>{setGeneration(true);try{setOffres(await apiBackoffice.genererOffresDemande(reference));toast.success("Les propositions Royal Onyx ont été générées à partir de la demande.");}catch(cause){toast.error(cause instanceof Error?cause.message:"La génération automatique a échoué.");}finally{setGeneration(false);}};
+  const ouvrirTarification=(offre:OffreAssuranceBackoffice)=>{
+    const lignes=lireListeObjetsCalcul(offre.detail_calcul,"garanties_detail").map((ligne,index)=>({
+      code:typeof ligne.code==="string"?ligne.code:null,
+      libelle:typeof ligne.libelle==="string"?ligne.libelle:`Garantie ${index+1}`,
+      prime_xaf:lireNombreCalcul(ligne,"prime_xaf")??0,
+      annuite_xaf:lireNombreCalcul(ligne,"annuite_xaf"),
+      capital_montant:typeof ligne.capital_montant==="string"?ligne.capital_montant:null,
+      franchise:typeof ligne.franchise==="string"?ligne.franchise:null,
+    }));
+    setLignesTarification(lignes);
+    setFraisTarification({accessoires:String(lireNombreCalcul(offre.detail_calcul,"accessoires_xaf")??0),asac:String(lireNombreCalcul(offre.detail_calcul,"fichier_asac_xaf")??0),cemac:String(lireNombreCalcul(offre.detail_calcul,"carte_cemac_xaf")??0),dta:String(lireNombreCalcul(offre.detail_calcul,"dta_xaf")??0),autres:String(lireNombreCalcul(offre.detail_calcul,"autres_frais_xaf")??0)});
+    setOffreACompleter(offre);
+  };
+  const finaliserTarification=async()=>{if(!offreACompleter)return;setFinalisation(true);try{await apiBackoffice.finaliserTarificationOffre(reference,offreACompleter.id,{garanties_detail:lignesTarification,accessoires_xaf:Number(fraisTarification.accessoires||0),fichier_asac_xaf:Number(fraisTarification.asac||0),carte_cemac_xaf:Number(fraisTarification.cemac||0),dta_xaf:Number(fraisTarification.dta||0),autres_frais_xaf:Number(fraisTarification.autres||0)});toast.success("Le total TTC a été recalculé. L’offre peut maintenant être envoyée.");setOffreACompleter(null);await charger();}catch(cause){toast.error(cause instanceof Error?cause.message:"Le calcul n’a pas pu être enregistré.");}finally{setFinalisation(false);}};
   const transmettre=async()=>{
     if(!selectionEnvoi.length)return;
     setTransmission(true);
@@ -779,9 +810,10 @@ function OffresDemandePanel({ reference, statutDemande, peutCreer, version, onAc
   const creer=async()=>{
     setEnregistrement(true);
     try{
+      const garantiesDetail=listeOffre(formulaire.garanties).map((ligne,index)=>{const [libelle,montant,capital,franchise]=ligne.split("|").map((element)=>element.trim());return {code:`manuel_${index+1}`,libelle,prime_xaf:Number(montant),capital_montant:capital||null,franchise:franchise||null};});
       await apiBackoffice.creerOffreDemande(reference,{
         compagnie_id:formulaire.compagnieId,
-        prime_xaf:Number(formulaire.prime),
+        prime_xaf:primeManuelleCalculee,
         duree_mois:Number(formulaire.duree),
         date_effet:formulaire.dateEffet,
         franchise_xaf:Number(formulaire.franchise||0),
@@ -791,23 +823,25 @@ function OffresDemandePanel({ reference, statutDemande, peutCreer, version, onAc
         documents_requis:listeOffre(formulaire.documents),
         recommandee:formulaire.recommandee,
         conseil:formulaire.conseil.trim(),
+        tarification:{garanties_detail:garantiesDetail,accessoires_xaf:Number(formulaire.accessoires||0),fichier_asac_xaf:Number(formulaire.asac||0),carte_cemac_xaf:Number(formulaire.cemac||0),dta_xaf:Number(formulaire.dta||0),autres_frais_xaf:Number(formulaire.autres||0)},
       });
       toast.success("L’offre est disponible dans l’espace client.");
       setOuvert(false);
-      setFormulaire({compagnieId:"",prime:"",duree:"12",dateEffet:"",franchise:"0",garanties:"",options:"",exclusions:"",documents:"",recommandee:true,conseil:""});
+      setFormulaire({compagnieId:"",prime:"",duree:"12",dateEffet:"",franchise:"0",garanties:"",accessoires:"0",asac:"0",cemac:"0",dta:"0",autres:"0",options:"",exclusions:"",documents:"",recommandee:true,conseil:""});
       await Promise.all([charger(),onActualiserDemande()]);
     }catch(cause){toast.error(cause instanceof Error?cause.message:"L’offre n’a pas pu être créée.");}finally{setEnregistrement(false);}
   };
-  const compagnieSelectionnee=compagnies.find((compagnie)=>compagnie.id===formulaire.compagnieId);
-  const prime=Number(formulaire.prime);
-  const compagnieTest=compagnieSelectionnee?.code==="CAMPAY-DEMO";
-  const primeValide=compagnieTest?prime>=1&&prime<=24:prime>=100;
-  const valide=Boolean(formulaire.compagnieId)&&primeValide&&Boolean(formulaire.dateEffet)&&listeOffre(formulaire.garanties).length>0;
+  const lignesManuellesValides=listeOffre(formulaire.garanties).every((ligne)=>{const [libelle,montant]=ligne.split("|").map((element)=>element.trim());return Boolean(libelle)&&Number.isFinite(Number(montant))&&Number(montant)>=0;});
+  const primeNetteManuelle=listeOffre(formulaire.garanties).reduce((total,ligne)=>total+Number(ligne.split("|")[1]||0),0);
+  const baseTaxeManuelle=primeNetteManuelle+Number(formulaire.accessoires||0)+Number(formulaire.asac||0);
+  const primeManuelleCalculee=baseTaxeManuelle+Math.round(baseTaxeManuelle*0.1925)+Number(formulaire.cemac||0)+Number(formulaire.dta||0)+Number(formulaire.autres||0);
+  const valide=Boolean(formulaire.compagnieId)&&primeManuelleCalculee>=100&&Boolean(formulaire.dateEffet)&&listeOffre(formulaire.garanties).length>0&&lignesManuellesValides;
   const nombreAutomatiques=offres.filter((offre)=>offre.origine==="automatique").length;
   const nombreManuelles=offres.length-nombreAutomatiques;
 
-  return <Card className="request-page-panel"><CardContent className="p-0"><div className="section-title-row"><div><p className="eyebrow">Offres calculées et manuelles</p><h2>Propositions au client</h2>{!chargement&&offres.length>0&&<p className="mt-1 text-sm text-muted-foreground">{nombreAutomatiques} automatique(s) · {nombreManuelles} manuelle(s)</p>}</div><div className="flex flex-wrap gap-2">{selectionEnvoi.length>0&&<Button size="sm" disabled={transmission} onClick={()=>void transmettre()}>{transmission?<LoaderCircle className="animate-spin"/>:<ChevronRight/>}Envoyer {selectionEnvoi.length} offre{selectionEnvoi.length>1?"s":""} au client</Button>}{peutCreer&&<Button size="sm" variant="outline" onClick={()=>setOuvert(true)}><Plus/>Ajouter manuellement</Button>}</div></div>{offreChoisie&&<div className="m-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Choix actuel du client</p><strong className="mt-1 block text-base">{offreChoisie.reference}</strong><span className="text-sm text-emerald-900">{money.format(offreChoisie.prime_xaf)} · {offreChoisie.assureur}</span></div>{peutCreer&&statutDemande!=="police_disponible"&&statutDemande!=="finalisee"&&(statutDemande==="contrat_en_preparation"?<Badge variant="secondary">Contrat en préparation</Badge>:<Button size="sm" disabled={preparationContrat} onClick={()=>void preparerContrat()}>{preparationContrat&&<LoaderCircle className="animate-spin"/>}Préparer le contrat</Button>)}</div></div>}{chargement?<div className="dashboard-skeleton" aria-label="Chargement des offres"><div className="skeleton skeleton--panel"/></div>:offres.length?<div className="space-y-4 p-4">{offres.map((offre)=><CarteOffreDemande offre={offre} key={offre.id} peutTransmettre={peutCreer} selectionneePourEnvoi={selectionEnvoi.includes(offre.id)} onSelectionEnvoi={modifierSelectionEnvoi}/>)}</div>:<div className="request-claim"><div><strong>Aucune offre disponible.</strong><span>Les offres automatiques apparaissent ici en brouillon lorsqu’un barème complet s’applique. Vous pouvez aussi en ajouter une manuellement.</span></div></div>}
-    <Dialog open={ouvert} onOpenChange={setOuvert}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>Ajouter une offre réelle</DialogTitle><DialogDescription>Le client verra cette offre, pourra la sélectionner puis échanger directement avec son courtier.</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2"><label><Label>Compagnie d’assurance</Label><Select value={formulaire.compagnieId} onValueChange={(valeur)=>modifier("compagnieId",valeur)}><SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner une compagnie"/></SelectTrigger><SelectContent>{compagnies.map((compagnie)=><SelectItem key={compagnie.id} value={compagnie.id}>{compagnie.nom}</SelectItem>)}</SelectContent></Select></label><label><Label>Prime à payer (FCFA)</Label><Input type="number" min={compagnieTest?1:100} max={compagnieTest?24:2_000_000_000} value={formulaire.prime} onChange={(event)=>modifier("prime",event.target.value)} placeholder={compagnieTest?"20":"105000"}/>{compagnieTest&&<small className="mt-1 block text-xs text-muted-foreground">Montant de test : 1 à 24 FCFA.</small>}</label><label><Label>Durée (mois)</Label><Input type="number" min="1" max="120" value={formulaire.duree} onChange={(event)=>modifier("duree",event.target.value)}/></label><label><Label>Date d’effet</Label><Input type="date" value={formulaire.dateEffet} onChange={(event)=>modifier("dateEffet",event.target.value)}/></label><label><Label>Franchise (FCFA)</Label><Input type="number" min="0" value={formulaire.franchise} onChange={(event)=>modifier("franchise",event.target.value)}/></label><label className="flex items-center gap-3 self-end rounded-lg border p-3"><input type="checkbox" checked={formulaire.recommandee} onChange={(event)=>modifier("recommandee",event.target.checked)}/><span>Recommander cette offre au client</span></label><label className="sm:col-span-2"><Label>Garanties incluses (une par ligne)</Label><Textarea rows={3} value={formulaire.garanties} onChange={(event)=>modifier("garanties",event.target.value)} placeholder={"Responsabilité civile\nDéfense et recours"}/></label><label><Label>Options</Label><Textarea rows={3} value={formulaire.options} onChange={(event)=>modifier("options",event.target.value)}/></label><label><Label>Exclusions principales</Label><Textarea rows={3} value={formulaire.exclusions} onChange={(event)=>modifier("exclusions",event.target.value)}/></label><label className="sm:col-span-2"><Label>Documents requis</Label><Textarea rows={2} value={formulaire.documents} onChange={(event)=>modifier("documents",event.target.value)} placeholder="Une pièce par ligne"/></label><label className="sm:col-span-2"><Label>Conseil au client</Label><Textarea rows={3} value={formulaire.conseil} onChange={(event)=>modifier("conseil",event.target.value)}/></label></div><DialogFooter><Button variant="outline" onClick={()=>setOuvert(false)}>Annuler</Button><Button disabled={!valide||enregistrement} onClick={()=>void creer()}>{enregistrement&&<LoaderCircle className="animate-spin"/>}Publier l’offre</Button></DialogFooter></DialogContent></Dialog>
+  return <Card className="request-page-panel"><CardContent className="p-0"><div className="section-title-row"><div><p className="eyebrow">Offres calculées et manuelles</p><h2>Propositions au client</h2>{!chargement&&offres.length>0&&<p className="mt-1 text-sm text-muted-foreground">{nombreAutomatiques} automatique(s) · {nombreManuelles} manuelle(s)</p>}</div><div className="flex flex-wrap gap-2">{selectionEnvoi.length>0&&<Button size="sm" disabled={transmission} onClick={()=>void transmettre()}>{transmission?<LoaderCircle className="animate-spin"/>:<ChevronRight/>}Envoyer {selectionEnvoi.length} offre{selectionEnvoi.length>1?"s":""} au client</Button>}{peutCreer&&<Button size="sm" variant="outline" disabled={generation} onClick={()=>void generer()}>{generation?<LoaderCircle className="animate-spin"/>:<RefreshCcw/>}Générer avec Royal Onyx</Button>}{peutCreer&&<Button size="sm" variant="outline" onClick={()=>setOuvert(true)}><Plus/>Ajouter manuellement</Button>}</div></div>{offreChoisie&&<div className="m-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Choix actuel du client</p><strong className="mt-1 block text-base">{offreChoisie.reference}</strong><span className="text-sm text-emerald-900">{money.format(offreChoisie.prime_xaf)} · {offreChoisie.assureur}</span></div>{peutCreer&&statutDemande!=="police_disponible"&&statutDemande!=="finalisee"&&(statutDemande==="contrat_en_preparation"?<Badge variant="secondary">Contrat en préparation</Badge>:<Button size="sm" disabled={preparationContrat} onClick={()=>void preparerContrat()}>{preparationContrat&&<LoaderCircle className="animate-spin"/>}Préparer le contrat</Button>)}</div></div>}{chargement?<div className="dashboard-skeleton" aria-label="Chargement des offres"><div className="skeleton skeleton--panel"/></div>:offres.length?<div className="space-y-4 p-4">{offres.map((offre)=><CarteOffreDemande offre={offre} key={offre.id} peutTransmettre={peutCreer} selectionneePourEnvoi={selectionEnvoi.includes(offre.id)} onSelectionEnvoi={modifierSelectionEnvoi} onCompleter={ouvrirTarification}/>)}</div>:<div className="request-claim"><div><strong>Aucune offre disponible.</strong><span>Générez une proposition Royal Onyx à partir des garanties demandées, ou ajoutez une offre manuellement.</span></div></div>}
+    <Dialog open={ouvert} onOpenChange={setOuvert}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"><DialogHeader><DialogTitle>Ajouter une offre réelle</DialogTitle><DialogDescription>Renseignez chaque garantie et sa prime. Le serveur calcule automatiquement la taxe de 19,25 % et le total TTC.</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2"><label><Label>Compagnie d’assurance</Label><Select value={formulaire.compagnieId} onValueChange={(valeur)=>modifier("compagnieId",valeur)}><SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner une compagnie"/></SelectTrigger><SelectContent>{compagnies.map((compagnie)=><SelectItem key={compagnie.id} value={compagnie.id}>{compagnie.nom}</SelectItem>)}</SelectContent></Select></label><label><Label>Durée (mois)</Label><Input type="number" min="1" max="120" value={formulaire.duree} onChange={(event)=>modifier("duree",event.target.value)}/></label><label><Label>Date d’effet</Label><Input type="date" value={formulaire.dateEffet} onChange={(event)=>modifier("dateEffet",event.target.value)}/></label><label className="flex items-center gap-3 self-end rounded-lg border p-3"><input type="checkbox" checked={formulaire.recommandee} onChange={(event)=>modifier("recommandee",event.target.checked)}/><span>Recommander cette offre au client</span></label><label className="sm:col-span-2"><Label>Garanties — libellé | prime | capital | franchise</Label><Textarea rows={5} value={formulaire.garanties} onChange={(event)=>modifier("garanties",event.target.value)} placeholder={"Responsabilité civile | 85000 | Illimité | Néant\nDéfense et recours | 2000 | 5 000 000 FCFA | Néant"}/><small className="mt-1 block text-xs text-muted-foreground">Une garantie par ligne. Le montant après le premier « | » compose la prime nette.</small></label><label><Label>Accessoires (FCFA)</Label><Input type="number" min="0" value={formulaire.accessoires} onChange={(event)=>modifier("accessoires",event.target.value)}/></label><label><Label>Fichier ASAC (FCFA)</Label><Input type="number" min="0" value={formulaire.asac} onChange={(event)=>modifier("asac",event.target.value)}/></label><label><Label>Carte CEMAC (FCFA)</Label><Input type="number" min="0" value={formulaire.cemac} onChange={(event)=>modifier("cemac",event.target.value)}/></label><label><Label>DTA (FCFA)</Label><Input type="number" min="0" value={formulaire.dta} onChange={(event)=>modifier("dta",event.target.value)}/></label><label><Label>Autres frais (FCFA)</Label><Input type="number" min="0" value={formulaire.autres} onChange={(event)=>modifier("autres",event.target.value)}/></label><div className="rounded-lg border bg-slate-50 p-3"><span className="block text-xs text-muted-foreground">Total TTC calculé</span><strong className="text-lg">{money.format(primeManuelleCalculee)}</strong></div><label><Label>Options</Label><Textarea rows={3} value={formulaire.options} onChange={(event)=>modifier("options",event.target.value)}/></label><label><Label>Exclusions principales</Label><Textarea rows={3} value={formulaire.exclusions} onChange={(event)=>modifier("exclusions",event.target.value)}/></label><label className="sm:col-span-2"><Label>Documents requis</Label><Textarea rows={2} value={formulaire.documents} onChange={(event)=>modifier("documents",event.target.value)} placeholder="Une pièce par ligne"/></label><label className="sm:col-span-2"><Label>Conseil au client</Label><Textarea rows={3} value={formulaire.conseil} onChange={(event)=>modifier("conseil",event.target.value)}/></label></div><DialogFooter><Button variant="outline" onClick={()=>setOuvert(false)}>Annuler</Button><Button disabled={!valide||enregistrement} onClick={()=>void creer()}>{enregistrement&&<LoaderCircle className="animate-spin"/>}Publier l’offre</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={Boolean(offreACompleter)} onOpenChange={(ouvertCalcul)=>{if(!ouvertCalcul)setOffreACompleter(null);}}><DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-4xl"><DialogHeader><DialogTitle>Compléter la tarification {offreACompleter?.reference}</DialogTitle><DialogDescription>Contrôlez les montants proposés par le barème Royal Onyx et complétez les lignes manquantes. Le total TTC est recalculé côté serveur.</DialogDescription></DialogHeader><div className="space-y-3">{lignesTarification.map((ligne,index)=><div className="grid gap-3 rounded-xl border p-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(120px,.7fr)_minmax(0,1fr)_minmax(0,1fr)]" key={`${ligne.code??ligne.libelle}-${index}`}><label><Label>Garantie</Label><Input value={ligne.libelle} onChange={(event)=>setLignesTarification((courantes)=>courantes.map((item,position)=>position===index?{...item,libelle:event.target.value}:item))}/></label><label><Label>Prime (FCFA)</Label><Input type="number" min="0" value={ligne.prime_xaf} onChange={(event)=>setLignesTarification((courantes)=>courantes.map((item,position)=>position===index?{...item,prime_xaf:Number(event.target.value||0)}:item))}/></label><label><Label>Capital</Label><Input value={ligne.capital_montant??""} onChange={(event)=>setLignesTarification((courantes)=>courantes.map((item,position)=>position===index?{...item,capital_montant:event.target.value||null}:item))}/></label><label><Label>Franchise</Label><Input value={ligne.franchise??""} onChange={(event)=>setLignesTarification((courantes)=>courantes.map((item,position)=>position===index?{...item,franchise:event.target.value||null}:item))}/></label></div>)}</div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{([['accessoires','Accessoires'],['asac','Fichier ASAC'],['cemac','Carte CEMAC'],['dta','DTA'],['autres','Autres frais']] as const).map(([cle,libelle])=><label key={cle}><Label>{libelle}</Label><Input type="number" min="0" value={fraisTarification[cle]} onChange={(event)=>setFraisTarification((courants)=>({...courants,[cle]:event.target.value}))}/></label>)}</div><div className="rounded-xl border bg-slate-50 p-4 text-sm"><strong>Règle appliquée :</strong> prime nette = somme des garanties; base taxable = prime nette + accessoires + fichier ASAC; taxe = 19,25 % de cette base; total TTC = base + taxe + carte CEMAC + DTA + autres frais.</div><DialogFooter><Button variant="outline" onClick={()=>setOffreACompleter(null)}>Annuler</Button><Button disabled={finalisation||lignesTarification.length===0||lignesTarification.some((ligne)=>!ligne.libelle.trim()||ligne.prime_xaf<0)} onClick={()=>void finaliserTarification()}>{finalisation&&<LoaderCircle className="animate-spin"/>}Enregistrer le calcul</Button></DialogFooter></DialogContent></Dialog>
   </CardContent></Card>;
 }
 
@@ -973,10 +1007,10 @@ function ContratsReelsView({ utilisateur }: { utilisateur: UtilisateurBackoffice
   const [primeNette, setPrimeNette] = useState(0);
   const [accessoires, setAccessoires] = useState(0);
   const [fichierAsac, setFichierAsac] = useState(0);
-  const [taxes, setTaxes] = useState(0);
   const [carteCemac, setCarteCemac] = useState(0);
   const [dta, setDta] = useState(0);
   const [autresFrais, setAutresFrais] = useState(0);
+  const taxes=Math.round((Math.max(0,primeNette)+Math.max(0,accessoires)+Math.max(0,fichierAsac))*0.1925);
   const [territoireCouverture, setTerritoireCouverture] = useState("");
   const [nombreExemplaires, setNombreExemplaires] = useState(2);
   const [observations, setObservations] = useState("");
@@ -1065,7 +1099,6 @@ function ContratsReelsView({ utilisateur }: { utilisateur: UtilisateurBackoffice
     setPrimeNette(informations.prime_nette_xaf ?? contrat.prime_xaf);
     setAccessoires(informations.accessoires_xaf ?? 0);
     setFichierAsac(informations.fichier_asac_xaf ?? 0);
-    setTaxes(informations.taxes_xaf ?? 0);
     setCarteCemac(informations.carte_cemac_xaf ?? 0);
     setDta(informations.dta_xaf ?? 0);
     setAutresFrais(informations.autres_frais_xaf ?? 0);
@@ -1344,7 +1377,7 @@ function ContratsReelsView({ utilisateur }: { utilisateur: UtilisateurBackoffice
               <div className="grid gap-2"><Label>Prime nette (FCFA)</Label><Input type="number" min={0} value={primeNette} onChange={(event) => setPrimeNette(Number(event.target.value))} /></div>
               <div className="grid gap-2"><Label>Accessoires (FCFA)</Label><Input type="number" min={0} value={accessoires} onChange={(event) => setAccessoires(Number(event.target.value))} /></div>
               <div className="grid gap-2"><Label>Fichier ASAC (FCFA)</Label><Input type="number" min={0} value={fichierAsac} onChange={(event) => setFichierAsac(Number(event.target.value))} /></div>
-              <div className="grid gap-2"><Label>Taxes (FCFA)</Label><Input type="number" min={0} value={taxes} onChange={(event) => setTaxes(Number(event.target.value))} /></div>
+              <div className="grid gap-2"><Label>Taxe 19,25 % (calculée)</Label><Input type="number" value={taxes} readOnly /></div>
               <div className="grid gap-2"><Label>Carte CEMAC (FCFA)</Label><Input type="number" min={0} value={carteCemac} onChange={(event) => setCarteCemac(Number(event.target.value))} /></div>
               <div className="grid gap-2"><Label>DTA (FCFA)</Label><Input type="number" min={0} value={dta} onChange={(event) => setDta(Number(event.target.value))} /></div>
               <div className="grid gap-2"><Label>Autres frais (FCFA)</Label><Input type="number" min={0} value={autresFrais} onChange={(event) => setAutresFrais(Number(event.target.value))} /></div>
