@@ -680,54 +680,64 @@ function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSe
       </div>
 
       <div className="space-y-4 p-4">
-        {automatique && lignesCalcul.length > 0 && (
-          <div className="rounded-lg border border-blue-100 bg-white p-3">
-            <div className="mb-3 flex items-center gap-2">
-              <ChartNoAxesCombined className="size-4 text-blue-700" />
-              <strong className="text-sm">Détail du calcul automatique</strong>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {lignesCalcul.map((ligne) => (
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm" key={ligne.cle}>
-                  <span className="text-muted-foreground">{ligne.libelle}</span>
-                  <strong className="whitespace-nowrap text-right">{money.format(ligne.valeur)}</strong>
+        {automatique && (lignesCalcul.length > 0 || garantiesTarifees.length > 0 || beneficiairesBcare.length > 0) && (
+          <details className="group overflow-hidden rounded-lg border border-blue-100 bg-white">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3">
+              <span className="flex items-center gap-2">
+                <ChartNoAxesCombined className="size-4 text-blue-700" />
+                <strong className="text-sm">Détail du calcul automatique</strong>
+              </span>
+              <span className="flex items-center gap-1 text-xs font-medium text-blue-700">
+                Afficher
+                <ChevronRight className="size-4 transition-transform group-open:rotate-90" />
+              </span>
+            </summary>
+            <div className="space-y-3 border-t border-blue-100 p-3">
+              {lignesCalcul.length > 0 && (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {lignesCalcul.map((ligne) => (
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm" key={ligne.cle}>
+                      <span className="text-muted-foreground">{ligne.libelle}</span>
+                      <strong className="whitespace-nowrap text-right">{money.format(ligne.valeur)}</strong>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+              )}
 
-        {automatique && garantiesTarifees.length > 0 && (
-          <div className="overflow-hidden rounded-lg border border-blue-100 bg-white">
-            <div className="border-b border-blue-100 px-3 py-3">
-              <strong className="text-sm">Prix des garanties sélectionnées</strong>
-              <p className="mt-1 text-xs text-muted-foreground">Les montants ci-dessous composent la ligne « Garanties choisies ».</p>
-            </div>
-            <div className="divide-y">
-              {garantiesTarifees.map((garantie,index) => {
-                const libelle=typeof garantie.libelle==="string"?garantie.libelle:`Garantie ${index+1}`;
-                const type=garantie.statut_calcul==="a_completer"?"À compléter":garantie.type==="obligatoire_incluse"?"Obligatoire · incluse":"Calculée";
-                const montant=lireNombreCalcul(garantie,"prime_xaf")??lireNombreCalcul(garantie,"montant_xaf");
-                const note=typeof garantie.note==="string"?garantie.note:"";
-                return <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 px-3 py-3 text-sm" key={`${String(garantie.code??libelle)}-${index}`}><div><strong className="block">{libelle}</strong><span className="text-xs text-muted-foreground">{type}{note?` · ${note}`:""}</span></div><strong className="whitespace-nowrap text-right">{montant===null?"À saisir":money.format(montant)}</strong></div>;
-              })}
-            </div>
-          </div>
-        )}
+              {garantiesTarifees.length > 0 && (
+                <div className="overflow-hidden rounded-lg border border-blue-100 bg-white">
+                  <div className="border-b border-blue-100 px-3 py-3">
+                    <strong className="text-sm">Prix des garanties sélectionnées</strong>
+                    <p className="mt-1 text-xs text-muted-foreground">Les montants ci-dessous composent la ligne « Garanties choisies ».</p>
+                  </div>
+                  <div className="divide-y">
+                    {garantiesTarifees.map((garantie,index) => {
+                      const libelle=typeof garantie.libelle==="string"?garantie.libelle:`Garantie ${index+1}`;
+                      const type=garantie.statut_calcul==="a_completer"?"À compléter":garantie.type==="obligatoire_incluse"?"Obligatoire · incluse":"Calculée";
+                      const montant=lireNombreCalcul(garantie,"prime_xaf")??lireNombreCalcul(garantie,"montant_xaf");
+                      const note=typeof garantie.note==="string"?garantie.note:"";
+                      return <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 px-3 py-3 text-sm" key={`${String(garantie.code??libelle)}-${index}`}><div><strong className="block">{libelle}</strong><span className="text-xs text-muted-foreground">{type}{note?` · ${note}`:""}</span></div><strong className="whitespace-nowrap text-right">{montant===null?"À saisir":money.format(montant)}</strong></div>;
+                    })}
+                  </div>
+                </div>
+              )}
 
-        {automatique && beneficiairesBcare.length > 0 && (
-          <div className="space-y-3 rounded-lg border border-blue-100 bg-white p-3">
-            <div>
-              <strong className="text-sm">Décomposition tarifaire B‑CARE</strong>
-              <p className="mt-1 text-xs text-muted-foreground">Composantes indiquées par l’assurance pour chaque bénéficiaire.</p>
+              {beneficiairesBcare.length > 0 && (
+                <div className="space-y-3 rounded-lg border border-blue-100 bg-white p-3">
+                  <div>
+                    <strong className="text-sm">Décomposition tarifaire B‑CARE</strong>
+                    <p className="mt-1 text-xs text-muted-foreground">Composantes indiquées par l’assurance pour chaque bénéficiaire.</p>
+                  </div>
+                  {beneficiairesBcare.map((beneficiaire,index) => {
+                    const code=typeof beneficiaire.beneficiaire==="string"?beneficiaire.beneficiaire:"beneficiaire";
+                    const age=lireNombreCalcul(beneficiaire,"age");
+                    const primeFinale=lireNombreCalcul(beneficiaire,"prime_ttc_xaf");
+                    return <div className="overflow-hidden rounded-lg border" key={`${code}-${index}`}><div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 px-3 py-3"><div><strong className="block text-sm">{libellesBeneficiaires[code]??libelleCode(code)}</strong>{age!==null&&<span className="text-xs text-muted-foreground">{age} ans</span>}</div>{primeFinale!==null&&<div className="text-right"><span className="block text-xs text-muted-foreground">Prime finale</span><strong>{money.format(primeFinale)}</strong></div>}</div><div className="grid gap-px bg-border sm:grid-cols-2">{composantesBcare.flatMap(([cle,libelle])=>{const montant=lireNombreCalcul(beneficiaire,cle);return montant===null?[]:[<div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 bg-white px-3 py-2 text-sm" key={cle}><span className="text-muted-foreground">{libelle}</span><strong className="whitespace-nowrap">{money.format(montant)}</strong></div>];})}</div></div>;
+                  })}
+                </div>
+              )}
             </div>
-            {beneficiairesBcare.map((beneficiaire,index) => {
-              const code=typeof beneficiaire.beneficiaire==="string"?beneficiaire.beneficiaire:"beneficiaire";
-              const age=lireNombreCalcul(beneficiaire,"age");
-              const primeFinale=lireNombreCalcul(beneficiaire,"prime_ttc_xaf");
-              return <div className="overflow-hidden rounded-lg border" key={`${code}-${index}`}><div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 px-3 py-3"><div><strong className="block text-sm">{libellesBeneficiaires[code]??libelleCode(code)}</strong>{age!==null&&<span className="text-xs text-muted-foreground">{age} ans</span>}</div>{primeFinale!==null&&<div className="text-right"><span className="block text-xs text-muted-foreground">Prime finale</span><strong>{money.format(primeFinale)}</strong></div>}</div><div className="grid gap-px bg-border sm:grid-cols-2">{composantesBcare.flatMap(([cle,libelle])=>{const montant=lireNombreCalcul(beneficiaire,cle);return montant===null?[]:[<div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 bg-white px-3 py-2 text-sm" key={cle}><span className="text-muted-foreground">{libelle}</span><strong className="whitespace-nowrap">{money.format(montant)}</strong></div>];})}</div></div>;
-            })}
-          </div>
+          </details>
         )}
 
         <div>
