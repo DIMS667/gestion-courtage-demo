@@ -64,7 +64,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
 import { Claim, DemoData, Opportunity, Policy, Proposal, companies, products, users } from "@/src/demo-data";
 import { PartenairesView } from "@/src/partenaires-view";
-import { apiBackoffice, CLE_SYNCHRONISATION_SESSION_BACKOFFICE, ClientBackoffice, CompagniePartenaireResume, ContratAssuranceBackoffice, DetailDemandeClient, DetailSinistre, enregistrerSession, EVENEMENT_SESSION_BACKOFFICE_MODIFIEE, IntervenantDemande, LigneGarantiePolice, LigneTarificationOffre, MessageConversationBackoffice, MotifCorrectionDocument, OffreAssuranceBackoffice, oublierSession, PaiementCampayBackoffice, RapportActiviteBackoffice, ReponseAuthentification, ResumeDemandeClient, ResumeSinistre, RoleBackoffice, sessionBackofficeDoitEtreSynchronisee, StatutBackoffice, StatutDemande, StatutSinistre, TableauDeBordBackoffice, UtilisateurBackoffice } from "@/src/services/api-backoffice";
+import { apiBackoffice, CatalogueOffreAssistee, CLE_SYNCHRONISATION_SESSION_BACKOFFICE, ClientBackoffice, CompagniePartenaireResume, ContratAssuranceBackoffice, DetailDemandeClient, DetailSinistre, enregistrerSession, EVENEMENT_SESSION_BACKOFFICE_MODIFIEE, IntervenantDemande, LigneGarantiePolice, LigneTarificationOffre, MessageConversationBackoffice, MotifCorrectionDocument, OffreAssuranceBackoffice, OffreAssisteeCreation, oublierSession, PaiementCampayBackoffice, RapportActiviteBackoffice, ReponseAuthentification, ResumeDemandeClient, ResumeSinistre, RoleBackoffice, sessionBackofficeDoitEtreSynchronisee, StatutBackoffice, StatutDemande, StatutSinistre, TableauDeBordBackoffice, UtilisateurBackoffice } from "@/src/services/api-backoffice";
 import { initialiserAlerteSonore, jouerAlerteSonore } from "@/src/services/notification-sound";
 
 const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XAF", maximumFractionDigits: 0 });
@@ -630,7 +630,9 @@ const composantesBcare = [
 
 function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSelectionEnvoi, onCompleter }: { offre: OffreAssuranceBackoffice; peutTransmettre:boolean; selectionneePourEnvoi: boolean; onSelectionEnvoi: (offreId:string, selectionnee:boolean)=>void; onCompleter:(offre:OffreAssuranceBackoffice)=>void }) {
   const automatique = offre.origine === "automatique";
-  const brouillonAutomatique = automatique && !offre.transmise;
+  const assistee = offre.origine === "assistee";
+  const tarifee = automatique || assistee;
+  const brouillonTarife = tarifee && !offre.transmise;
   const lignesCalcul = lignesDetailCalcul(offre.detail_calcul);
   const garantiesTarifees = lireListeObjetsCalcul(offre.detail_calcul, "garanties_detail");
   const beneficiairesBcare = lireListeObjetsCalcul(offre.detail_calcul, "beneficiaires");
@@ -639,20 +641,20 @@ function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSe
   const calculIncomplet = offre.detail_calcul.calcul_complet === false;
 
   return (
-    <article className={`overflow-hidden rounded-xl border ${brouillonAutomatique ? "border-amber-300 bg-amber-50/40" : automatique ? "border-blue-200 bg-blue-50/30" : "bg-background"}`}>
+    <article className={`overflow-hidden rounded-xl border ${brouillonTarife ? "border-amber-300 bg-amber-50/40" : tarifee ? "border-blue-200 bg-blue-50/30" : "bg-background"}`}>
       <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <strong className="text-base">{offre.assureur}</strong>
-            <Badge className={automatique ? "border-blue-200 bg-blue-100 text-blue-800 hover:bg-blue-100" : ""} variant={automatique ? "outline" : "secondary"}>
-              {automatique && <Sparkles className="mr-1 size-3" />}
-              {automatique ? "Générée automatiquement" : "Ajoutée manuellement"}
+            <Badge className={tarifee ? "border-blue-200 bg-blue-100 text-blue-800 hover:bg-blue-100" : ""} variant={tarifee ? "outline" : "secondary"}>
+              {tarifee && <Sparkles className="mr-1 size-3" />}
+              {assistee ? "Préparée avec le tarifaire" : automatique ? "Générée automatiquement" : "Ajoutée manuellement"}
             </Badge>
             {offre.recommandee && !offre.selectionnee && <Badge variant="secondary">Recommandée</Badge>}
-            {brouillonAutomatique && <Badge className="border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-100" variant="outline">Non visible par le client</Badge>}
+            {brouillonTarife && <Badge className="border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-100" variant="outline">Non visible par le client</Badge>}
           </div>
           <p className="text-sm text-muted-foreground">{offre.reference} · {offre.libelle_produit}</p>
-          {automatique && (
+          {tarifee && (
             <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
               <span><strong className="text-foreground">Formule :</strong> {libelleCode(offre.formule_tarifaire_code)}</span>
               <span><strong className="text-foreground">Barème :</strong> {bareme ?? "Barème actif"}</span>
@@ -662,13 +664,13 @@ function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSe
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
           <StatusBadge value={offre.selectionnee ? "Sélectionnée" : offre.transmise ? "Envoyée au client" : "Brouillon"} />
-          {brouillonAutomatique && peutTransmettre && !calculIncomplet && (
+          {brouillonTarife && peutTransmettre && !calculIncomplet && (
             <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium shadow-sm">
               <input type="checkbox" checked={selectionneePourEnvoi} onChange={(event)=>onSelectionEnvoi(offre.id,event.target.checked)} />
               Sélectionner pour l’envoi
             </label>
           )}
-          {brouillonAutomatique && peutTransmettre && calculIncomplet && <Button size="sm" onClick={()=>onCompleter(offre)}>Compléter le calcul</Button>}
+          {brouillonTarife && peutTransmettre && calculIncomplet && <Button size="sm" onClick={()=>onCompleter(offre)}>Compléter le calcul</Button>}
         </div>
       </div>
 
@@ -680,7 +682,7 @@ function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSe
       </div>
 
       <div className="space-y-4 p-4">
-        {automatique && (lignesCalcul.length > 0 || garantiesTarifees.length > 0 || beneficiairesBcare.length > 0) && (
+        {tarifee && (lignesCalcul.length > 0 || garantiesTarifees.length > 0 || beneficiairesBcare.length > 0) && (
           <details className="group overflow-hidden rounded-lg border border-blue-100 bg-white">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3">
               <span className="flex items-center gap-2">
@@ -763,7 +765,52 @@ function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSe
   );
 }
 
-function OffresDemandePanel({ reference, statutDemande, peutCreer, version, onActualiserDemande }: { reference:string; statutDemande:StatutDemande; peutCreer:boolean; version:number; onActualiserDemande:()=>Promise<void> }) {
+const libellesCategoriesOffreAssistee: Record<string,string> = {
+  cat1_tourisme:"CAT1 — Véhicule de tourisme",
+  cat2_transport_produits:"CAT2 — Transport de produits",
+  cat3_transport_marchandises_tiers:"CAT3 — Transport de marchandises appartenant à des tiers",
+  cat4a_taxi_ville:"CAT4 A — Taxi de ville",
+  cat4b_transport_interurbain:"CAT4 B — Transport interurbain",
+  cat4c_transport_personnel_eleves:"CAT4 C — Transport du personnel et des élèves",
+};
+
+const placesOffreAssistee: Record<string,number[]> = {
+  cat1_tourisme:[5],
+  cat2_transport_produits:[5],
+  cat3_transport_marchandises_tiers:[3],
+  cat4a_taxi_ville:[5,6],
+  cat4b_transport_interurbain:[10,11,12,13,14,15,16,17,18,19,20,30,31,32,35,52,56,59,70],
+};
+
+type FormulaireOffreAssistee = {
+  compagnieId:string;
+  usage:string;
+  energie:""|"essence"|"diesel";
+  puissanceFiscale:string;
+  nombrePlaces:string;
+  zone:""|"A"|"B"|"C";
+  possedeRemorque:boolean;
+  dureeMois:string;
+  dateEffet:string;
+  garanties:string[];
+  recommandee:boolean;
+};
+
+const formulaireOffreAssisteeVide = ():FormulaireOffreAssistee => ({
+  compagnieId:"",
+  usage:"",
+  energie:"",
+  puissanceFiscale:"",
+  nombrePlaces:"",
+  zone:"",
+  possedeRemorque:false,
+  dureeMois:"",
+  dateEffet:"",
+  garanties:[],
+  recommandee:true,
+});
+
+function OffresDemandePanel({ reference, statutDemande, modePreparation, produit, sousType, peutCreer, version, onActualiserDemande }: { reference:string; statutDemande:StatutDemande; modePreparation:"saisie_directe"|"delegation_courtier"; produit:string; sousType:"voiture"|"moto_deux_trois_roues"|null; peutCreer:boolean; version:number; onActualiserDemande:()=>Promise<void> }) {
   const [offres,setOffres]=useState<OffreAssuranceBackoffice[]>([]);
   const [compagnies,setCompagnies]=useState<CompagniePartenaireResume[]>([]);
   const [chargement,setChargement]=useState(true);
@@ -778,10 +825,55 @@ function OffresDemandePanel({ reference, statutDemande, peutCreer, version, onAc
   const [fraisTarification,setFraisTarification]=useState({accessoires:"0",asac:"0",cemac:"0",dta:"0",autres:"0"});
   const [finalisation,setFinalisation]=useState(false);
   const [formulaire,setFormulaire]=useState({compagnieId:"",prime:"",duree:"12",dateEffet:"",franchise:"0",garanties:"",accessoires:"0",asac:"0",cemac:"0",dta:"0",autres:"0",options:"",exclusions:"",documents:"",recommandee:true,conseil:""});
+  const [offreAssisteeOuverte,setOffreAssisteeOuverte]=useState(false);
+  const [catalogueAssiste,setCatalogueAssiste]=useState<CatalogueOffreAssistee[]>([]);
+  const [chargementCatalogue,setChargementCatalogue]=useState(false);
+  const [creationAssistee,setCreationAssistee]=useState(false);
+  const [formulaireAssiste,setFormulaireAssiste]=useState<FormulaireOffreAssistee>(formulaireOffreAssisteeVide);
+  const demandeDelegueeAutomobile=modePreparation==="delegation_courtier"&&produit==="automobile"&&sousType==="voiture";
 
   const charger=async()=>{try{setOffres(await apiBackoffice.listerOffresDemande(reference));setSelectionEnvoi([]);}catch(cause){toast.error(cause instanceof Error?cause.message:"Impossible de charger les offres.");}finally{setChargement(false);}};
   useEffect(()=>{let actif=true;apiBackoffice.listerOffresDemande(reference).then((liste)=>{if(actif){setOffres(liste);setSelectionEnvoi([]);}}).catch((cause)=>{if(actif)toast.error(cause instanceof Error?cause.message:"Impossible de charger les offres.");}).finally(()=>{if(actif)setChargement(false);});return()=>{actif=false};},[reference,version]);
   useEffect(()=>{let actif=true;apiBackoffice.listerPartenaires().then((liste)=>{if(actif)setCompagnies(liste.filter((compagnie)=>compagnie.statut==="active"));}).catch((cause)=>{if(actif)toast.error(cause instanceof Error?cause.message:"Impossible de charger les compagnies.");});return()=>{actif=false};},[]);
+  const catalogueSelectionne=catalogueAssiste.find((item)=>item.compagnie_id===formulaireAssiste.compagnieId)??null;
+  const garantiesCategorie=catalogueSelectionne?.garanties_par_categorie[formulaireAssiste.usage]??catalogueSelectionne?.garanties??[];
+  const dureesCategorie=catalogueSelectionne?.durees_par_categorie[formulaireAssiste.usage]??catalogueSelectionne?.durees_mois??[];
+  const appliquerCatalogue=(catalogue:CatalogueOffreAssistee)=>{
+    const usage=catalogue.categories[0]??"";
+    const nombresPlaces=placesOffreAssistee[usage];
+    const garanties=catalogue.garanties_par_categorie[usage]??catalogue.garanties;
+    const durees=catalogue.durees_par_categorie[usage]??catalogue.durees_mois;
+    setFormulaireAssiste((courant)=>({
+      ...courant,
+      compagnieId:catalogue.compagnie_id,
+      usage,
+      nombrePlaces:nombresPlaces?.[0]?String(nombresPlaces[0]):"",
+      dureeMois:durees[0]?String(durees[0]):"",
+      garanties:garanties.filter((garantie)=>garantie.obligatoire).map((garantie)=>garantie.code),
+    }));
+  };
+  const ouvrirOffreAssistee=async()=>{
+    setOffreAssisteeOuverte(true);
+    if(catalogueAssiste.length)return;
+    setChargementCatalogue(true);
+    try{
+      const catalogue=await apiBackoffice.listerCatalogueOffresAssistees(reference);
+      setCatalogueAssiste(catalogue);
+      if(catalogue[0])appliquerCatalogue(catalogue[0]);
+    }catch(cause){toast.error(cause instanceof Error?cause.message:"Le tarifaire n’a pas pu être chargé.");}
+    finally{setChargementCatalogue(false);}
+  };
+  const modifierAssiste=<K extends keyof FormulaireOffreAssistee>(champ:K,valeur:FormulaireOffreAssistee[K])=>setFormulaireAssiste((courant)=>({...courant,[champ]:valeur}));
+  const modifierUsageAssiste=(usage:string)=>{
+    const nombresPlaces=placesOffreAssistee[usage];
+    const garanties=catalogueSelectionne?.garanties_par_categorie[usage]??catalogueSelectionne?.garanties??[];
+    const durees=catalogueSelectionne?.durees_par_categorie[usage]??catalogueSelectionne?.durees_mois??[];
+    setFormulaireAssiste((courant)=>({...courant,usage,nombrePlaces:nombresPlaces?.[0]?String(nombresPlaces[0]):"",dureeMois:durees[0]?String(durees[0]):"",garanties:garanties.filter((garantie)=>garantie.obligatoire).map((garantie)=>garantie.code)}));
+  };
+  const basculerGarantieAssistee=(code:string,obligatoire:boolean)=>{
+    if(obligatoire)return;
+    setFormulaireAssiste((courant)=>({...courant,garanties:courant.garanties.includes(code)?courant.garanties.filter((item)=>item!==code):[...courant.garanties,code]}));
+  };
   const modifier=(champ:keyof typeof formulaire,valeur:string|boolean)=>setFormulaire((courant)=>({...courant,[champ]:valeur}));
   const modifierSelectionEnvoi=(offreId:string,selectionnee:boolean)=>setSelectionEnvoi((courante)=>selectionnee?[...courante,offreId]:courante.filter((id)=>id!==offreId));
   const generer=async()=>{setGeneration(true);try{const resultat=await apiBackoffice.genererOffresDemande(reference);setOffres(resultat);const offresRoyal=resultat.filter((offre)=>offre.formule_tarifaire_code==="royal_auto_lecture_directe");if(offresRoyal.length===0){toast.error("Aucune offre Royal Onyx n’a été générée pour cette demande.");return;}toast.success(`${offresRoyal.length} proposition${offresRoyal.length>1?"s":""} Royal Onyx ${offresRoyal.length>1?"sont disponibles":"est disponible"}.`);}catch(cause){toast.error(cause instanceof Error?cause.message:"La génération automatique a échoué.");}finally{setGeneration(false);}};
@@ -842,15 +934,79 @@ function OffresDemandePanel({ reference, statutDemande, peutCreer, version, onAc
       await Promise.all([charger(),onActualiserDemande()]);
     }catch(cause){toast.error(cause instanceof Error?cause.message:"L’offre n’a pas pu être créée.");}finally{setEnregistrement(false);}
   };
+  const valideAssiste=Boolean(
+    catalogueSelectionne&&
+    formulaireAssiste.usage&&
+    formulaireAssiste.energie&&
+    Number.isInteger(Number(formulaireAssiste.puissanceFiscale))&&
+    Number(formulaireAssiste.puissanceFiscale)>=1&&
+    Number(formulaireAssiste.puissanceFiscale)<=99&&
+    Number.isInteger(Number(formulaireAssiste.nombrePlaces))&&
+    Number(formulaireAssiste.nombrePlaces)>=1&&
+    formulaireAssiste.zone&&
+    formulaireAssiste.dureeMois&&
+    formulaireAssiste.dateEffet&&
+    formulaireAssiste.garanties.length>=2
+  );
+  const creerAssistee=async()=>{
+    if(!catalogueSelectionne||!valideAssiste||creationAssistee)return;
+    const entree:OffreAssisteeCreation={
+      compagnie_id:catalogueSelectionne.compagnie_id,
+      usage:formulaireAssiste.usage,
+      energie:formulaireAssiste.energie as "essence"|"diesel",
+      puissance_fiscale:Number(formulaireAssiste.puissanceFiscale),
+      nombre_places:Number(formulaireAssiste.nombrePlaces),
+      zone_circulation:formulaireAssiste.zone as "A"|"B"|"C",
+      possede_remorque:formulaireAssiste.possedeRemorque,
+      duree_mois:Number(formulaireAssiste.dureeMois),
+      date_effet:formulaireAssiste.dateEffet,
+      garanties:formulaireAssiste.garanties,
+      recommandee:formulaireAssiste.recommandee,
+    };
+    setCreationAssistee(true);
+    try{
+      const offre=await apiBackoffice.creerOffreAssistee(reference,entree);
+      toast.success(`L’offre ${offre.reference} a été calculée. Vérifiez-la avant de l’envoyer.`);
+      setOffreAssisteeOuverte(false);
+      setFormulaireAssiste(formulaireOffreAssisteeVide());
+      setCatalogueAssiste([]);
+      await charger();
+    }catch(cause){toast.error(cause instanceof Error?cause.message:"L’offre n’a pas pu être calculée.");}
+    finally{setCreationAssistee(false);}
+  };
   const lignesManuellesValides=listeOffre(formulaire.garanties).every((ligne)=>{const [libelle,montant]=ligne.split("|").map((element)=>element.trim());return Boolean(libelle)&&Number.isFinite(Number(montant))&&Number(montant)>=0;});
   const primeNetteManuelle=listeOffre(formulaire.garanties).reduce((total,ligne)=>total+Number(ligne.split("|")[1]||0),0);
   const baseTaxeManuelle=primeNetteManuelle+Number(formulaire.accessoires||0)+Number(formulaire.asac||0);
   const primeManuelleCalculee=baseTaxeManuelle+Math.round(baseTaxeManuelle*0.1925)+Number(formulaire.cemac||0)+Number(formulaire.dta||0)+Number(formulaire.autres||0);
   const valide=Boolean(formulaire.compagnieId)&&primeManuelleCalculee>=100&&Boolean(formulaire.dateEffet)&&listeOffre(formulaire.garanties).length>0&&lignesManuellesValides;
   const nombreAutomatiques=offres.filter((offre)=>offre.origine==="automatique").length;
-  const nombreManuelles=offres.length-nombreAutomatiques;
+  const nombreAssistees=offres.filter((offre)=>offre.origine==="assistee").length;
+  const nombreManuelles=offres.length-nombreAutomatiques-nombreAssistees;
 
-  return <Card className="request-page-panel"><CardContent className="p-0"><div className="section-title-row"><div><p className="eyebrow">Offres calculées et manuelles</p><h2>Propositions au client</h2>{!chargement&&offres.length>0&&<p className="mt-1 text-sm text-muted-foreground">{nombreAutomatiques} automatique(s) · {nombreManuelles} manuelle(s)</p>}</div><div className="flex flex-wrap gap-2">{selectionEnvoi.length>0&&<Button size="sm" disabled={transmission} onClick={()=>void transmettre()}>{transmission?<LoaderCircle className="animate-spin"/>:<ChevronRight/>}Envoyer {selectionEnvoi.length} offre{selectionEnvoi.length>1?"s":""} au client</Button>}{peutCreer&&<Button size="sm" variant="outline" disabled={generation} onClick={()=>void generer()}>{generation?<LoaderCircle className="animate-spin"/>:<RefreshCcw/>}Générer avec Royal Onyx</Button>}{peutCreer&&<Button size="sm" variant="outline" onClick={()=>setOuvert(true)}><Plus/>Ajouter manuellement</Button>}</div></div>{offreChoisie&&<div className="m-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Choix actuel du client</p><strong className="mt-1 block text-base">{offreChoisie.reference}</strong><span className="text-sm text-emerald-900">{money.format(offreChoisie.prime_xaf)} · {offreChoisie.assureur}</span></div>{peutCreer&&statutDemande!=="police_disponible"&&statutDemande!=="finalisee"&&(statutDemande==="contrat_en_preparation"?<Badge variant="secondary">Contrat en préparation</Badge>:<Button size="sm" disabled={preparationContrat} onClick={()=>void preparerContrat()}>{preparationContrat&&<LoaderCircle className="animate-spin"/>}Préparer le contrat</Button>)}</div></div>}{chargement?<div className="dashboard-skeleton" aria-label="Chargement des offres"><div className="skeleton skeleton--panel"/></div>:offres.length?<div className="space-y-4 p-4">{offres.map((offre)=><CarteOffreDemande offre={offre} key={offre.id} peutTransmettre={peutCreer} selectionneePourEnvoi={selectionEnvoi.includes(offre.id)} onSelectionEnvoi={modifierSelectionEnvoi} onCompleter={ouvrirTarification}/>)}</div>:<div className="request-claim"><div><strong>Aucune offre disponible.</strong><span>Générez une proposition Royal Onyx à partir des garanties demandées, ou ajoutez une offre manuellement.</span></div></div>}
+  return <Card className="request-page-panel"><CardContent className="p-0"><div className="section-title-row"><div><p className="eyebrow">Offres calculées et manuelles</p><h2>Propositions au client</h2>{!chargement&&offres.length>0&&<p className="mt-1 text-sm text-muted-foreground">{nombreAutomatiques} automatique(s) · {nombreAssistees} assistée(s) · {nombreManuelles} manuelle(s)</p>}</div><div className="flex flex-wrap gap-2">{selectionEnvoi.length>0&&<Button size="sm" disabled={transmission} onClick={()=>void transmettre()}>{transmission?<LoaderCircle className="animate-spin"/>:<ChevronRight/>}Envoyer {selectionEnvoi.length} offre{selectionEnvoi.length>1?"s":""} au client</Button>}{peutCreer&&!demandeDelegueeAutomobile&&<Button size="sm" variant="outline" disabled={generation} onClick={()=>void generer()}>{generation?<LoaderCircle className="animate-spin"/>:<RefreshCcw/>}Générer avec Royal Onyx</Button>}{peutCreer&&demandeDelegueeAutomobile&&<Button size="sm" onClick={()=>void ouvrirOffreAssistee()}><Sparkles/>Préparer avec un tarifaire</Button>}{peutCreer&&!demandeDelegueeAutomobile&&<Button size="sm" variant="outline" onClick={()=>setOuvert(true)}><Plus/>Ajouter manuellement</Button>}</div></div>{offreChoisie&&<div className="m-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Choix actuel du client</p><strong className="mt-1 block text-base">{offreChoisie.reference}</strong><span className="text-sm text-emerald-900">{money.format(offreChoisie.prime_xaf)} · {offreChoisie.assureur}</span></div>{peutCreer&&statutDemande!=="police_disponible"&&statutDemande!=="finalisee"&&(statutDemande==="contrat_en_preparation"?<Badge variant="secondary">Contrat en préparation</Badge>:<Button size="sm" disabled={preparationContrat} onClick={()=>void preparerContrat()}>{preparationContrat&&<LoaderCircle className="animate-spin"/>}Préparer le contrat</Button>)}</div></div>}{chargement?<div className="dashboard-skeleton" aria-label="Chargement des offres"><div className="skeleton skeleton--panel"/></div>:offres.length?<div className="space-y-4 p-4">{offres.map((offre)=><CarteOffreDemande offre={offre} key={offre.id} peutTransmettre={peutCreer} selectionneePourEnvoi={selectionEnvoi.includes(offre.id)} onSelectionEnvoi={modifierSelectionEnvoi} onCompleter={ouvrirTarification}/>)}</div>:<div className="request-claim"><div><strong>Aucune offre disponible.</strong><span>{demandeDelegueeAutomobile?"Préparez une offre à partir du tarifaire de la compagnie choisie.":"Générez une proposition à partir des garanties demandées."}</span></div></div>}
+    <Dialog open={offreAssisteeOuverte} onOpenChange={setOffreAssisteeOuverte}>
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Préparer une offre avec un tarifaire</DialogTitle>
+          <DialogDescription>Choisissez la compagnie et les garanties. Tous les prix, frais et taxes sont imposés par le tarifaire et calculés par le serveur.</DialogDescription>
+        </DialogHeader>
+        {chargementCatalogue?<div className="grid min-h-40 place-items-center text-sm text-muted-foreground"><LoaderCircle className="animate-spin"/>Chargement du tarifaire…</div>:catalogueAssiste.length===0?<div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><strong className="block">Aucun tarifaire automobile actif</strong><span>Activez d’abord le tarifaire d’une compagnie pour préparer cette offre.</span></div>:<div className="grid gap-4 sm:grid-cols-2">
+          <label><Label>Compagnie d’assurance</Label><Select value={formulaireAssiste.compagnieId} onValueChange={(valeur)=>{const catalogue=catalogueAssiste.find((item)=>item.compagnie_id===valeur);if(catalogue)appliquerCatalogue(catalogue);}}><SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner"/></SelectTrigger><SelectContent>{catalogueAssiste.map((catalogue)=><SelectItem key={catalogue.compagnie_id} value={catalogue.compagnie_id}>{catalogue.compagnie_nom}</SelectItem>)}</SelectContent></Select>{catalogueSelectionne&&<small className="mt-1 block text-xs text-muted-foreground">Barème utilisé : {catalogueSelectionne.bareme_code}</small>}</label>
+          <label><Label>Catégorie du véhicule</Label><Select value={formulaireAssiste.usage} onValueChange={modifierUsageAssiste}><SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner"/></SelectTrigger><SelectContent>{catalogueSelectionne?.categories.map((categorie)=><SelectItem key={categorie} value={categorie}>{libellesCategoriesOffreAssistee[categorie]??categorie}</SelectItem>)}</SelectContent></Select></label>
+          <label><Label>Énergie</Label><Select value={formulaireAssiste.energie} onValueChange={(valeur)=>modifierAssiste("energie",valeur as "essence"|"diesel")}><SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner"/></SelectTrigger><SelectContent><SelectItem value="essence">Essence</SelectItem><SelectItem value="diesel">Diesel</SelectItem></SelectContent></Select></label>
+          <label><Label>Puissance fiscale (CV)</Label><Input type="number" min="1" max="99" step="1" value={formulaireAssiste.puissanceFiscale} onChange={(event)=>modifierAssiste("puissanceFiscale",event.target.value)}/></label>
+          <label><Label>Nombre total de places</Label>{placesOffreAssistee[formulaireAssiste.usage]?<Select value={formulaireAssiste.nombrePlaces} onValueChange={(valeur)=>modifierAssiste("nombrePlaces",valeur)}><SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner"/></SelectTrigger><SelectContent>{placesOffreAssistee[formulaireAssiste.usage].map((nombre)=><SelectItem key={nombre} value={String(nombre)}>{nombre} places, conducteur compris</SelectItem>)}</SelectContent></Select>:<Input type="number" min="1" max="100" step="1" value={formulaireAssiste.nombrePlaces} onChange={(event)=>modifierAssiste("nombrePlaces",event.target.value)}/>}</label>
+          <label><Label>Zone de circulation</Label><Select value={formulaireAssiste.zone} onValueChange={(valeur)=>modifierAssiste("zone",valeur as "A"|"B"|"C")}><SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner"/></SelectTrigger><SelectContent><SelectItem value="A">Zone A</SelectItem><SelectItem value="B">Zone B</SelectItem><SelectItem value="C">Zone C</SelectItem></SelectContent></Select></label>
+          <label><Label>Remorque</Label><Select value={formulaireAssiste.possedeRemorque?"oui":"non"} onValueChange={(valeur)=>modifierAssiste("possedeRemorque",valeur==="oui")}><SelectTrigger className="w-full"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="non">Sans remorque</SelectItem><SelectItem value="oui">Avec remorque</SelectItem></SelectContent></Select></label>
+          <label><Label>Durée</Label><Select value={formulaireAssiste.dureeMois} onValueChange={(valeur)=>modifierAssiste("dureeMois",valeur)}><SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner"/></SelectTrigger><SelectContent>{dureesCategorie.map((duree)=><SelectItem key={duree} value={String(duree)}>{duree} mois</SelectItem>)}</SelectContent></Select></label>
+          <label><Label>Date d’effet</Label><Input type="date" value={formulaireAssiste.dateEffet} onChange={(event)=>modifierAssiste("dateEffet",event.target.value)}/></label>
+          <fieldset className="space-y-2 sm:col-span-2"><Label>Garanties</Label><div className="grid gap-2 sm:grid-cols-2">{garantiesCategorie.map((garantie)=><label className="flex cursor-pointer items-center gap-3 rounded-lg border bg-white p-3 text-sm" key={garantie.code}><input type="checkbox" checked={formulaireAssiste.garanties.includes(garantie.code)} disabled={garantie.obligatoire} onChange={()=>basculerGarantieAssistee(garantie.code,garantie.obligatoire)}/><span><strong className="block">{garantie.libelle}</strong>{garantie.obligatoire&&<small className="text-muted-foreground">Obligatoire</small>}</span></label>)}</div></fieldset>
+          <label className="flex items-center gap-3 rounded-lg border p-3 sm:col-span-2"><input type="checkbox" checked={formulaireAssiste.recommandee} onChange={(event)=>modifierAssiste("recommandee",event.target.checked)}/><span>Recommander cette offre au client</span></label>
+          <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm text-blue-950 sm:col-span-2"><strong>Montants verrouillés :</strong> garanties, prime nette, accessoires, fichier ASAC, taxe, carte CEMAC et total TTC seront lus dans le tarifaire sélectionné. Aucun de ces montants n’est modifiable ici.</div>
+        </div>}
+        <DialogFooter><Button variant="outline" onClick={()=>setOffreAssisteeOuverte(false)}>Annuler</Button><Button disabled={!valideAssiste||creationAssistee||chargementCatalogue} onClick={()=>void creerAssistee()}>{creationAssistee?<LoaderCircle className="animate-spin"/>:<Sparkles/>}Calculer l’offre</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
     <Dialog open={ouvert} onOpenChange={setOuvert}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"><DialogHeader><DialogTitle>Ajouter une offre réelle</DialogTitle><DialogDescription>Renseignez chaque garantie et sa prime. Le serveur calcule automatiquement la taxe de 19,25 % et le total TTC.</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2"><label><Label>Compagnie d’assurance</Label><Select value={formulaire.compagnieId} onValueChange={(valeur)=>modifier("compagnieId",valeur)}><SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner une compagnie"/></SelectTrigger><SelectContent>{compagnies.map((compagnie)=><SelectItem key={compagnie.id} value={compagnie.id}>{compagnie.nom}</SelectItem>)}</SelectContent></Select></label><label><Label>Durée (mois)</Label><Input type="number" min="1" max="120" value={formulaire.duree} onChange={(event)=>modifier("duree",event.target.value)}/></label><label><Label>Date d’effet</Label><Input type="date" value={formulaire.dateEffet} onChange={(event)=>modifier("dateEffet",event.target.value)}/></label><label className="flex items-center gap-3 self-end rounded-lg border p-3"><input type="checkbox" checked={formulaire.recommandee} onChange={(event)=>modifier("recommandee",event.target.checked)}/><span>Recommander cette offre au client</span></label><label className="sm:col-span-2"><Label>Garanties — libellé | prime | capital | franchise</Label><Textarea rows={5} value={formulaire.garanties} onChange={(event)=>modifier("garanties",event.target.value)} placeholder={"Responsabilité civile | 85000 | Illimité | Néant\nDéfense et recours | 2000 | 5 000 000 FCFA | Néant"}/><small className="mt-1 block text-xs text-muted-foreground">Une garantie par ligne. Le montant après le premier « | » compose la prime nette.</small></label><label><Label>Accessoires (FCFA)</Label><Input type="number" min="0" value={formulaire.accessoires} onChange={(event)=>modifier("accessoires",event.target.value)}/></label><label><Label>Fichier ASAC (FCFA)</Label><Input type="number" min="0" value={formulaire.asac} onChange={(event)=>modifier("asac",event.target.value)}/></label><label><Label>Carte CEMAC (FCFA)</Label><Input type="number" min="0" value={formulaire.cemac} onChange={(event)=>modifier("cemac",event.target.value)}/></label><label><Label>DTA (FCFA)</Label><Input type="number" min="0" value={formulaire.dta} onChange={(event)=>modifier("dta",event.target.value)}/></label><label><Label>Autres frais (FCFA)</Label><Input type="number" min="0" value={formulaire.autres} onChange={(event)=>modifier("autres",event.target.value)}/></label><div className="rounded-lg border bg-slate-50 p-3"><span className="block text-xs text-muted-foreground">Total TTC calculé</span><strong className="text-lg">{money.format(primeManuelleCalculee)}</strong></div><label><Label>Options</Label><Textarea rows={3} value={formulaire.options} onChange={(event)=>modifier("options",event.target.value)}/></label><label><Label>Exclusions principales</Label><Textarea rows={3} value={formulaire.exclusions} onChange={(event)=>modifier("exclusions",event.target.value)}/></label><label className="sm:col-span-2"><Label>Documents requis</Label><Textarea rows={2} value={formulaire.documents} onChange={(event)=>modifier("documents",event.target.value)} placeholder="Une pièce par ligne"/></label><label className="sm:col-span-2"><Label>Conseil au client</Label><Textarea rows={3} value={formulaire.conseil} onChange={(event)=>modifier("conseil",event.target.value)}/></label></div><DialogFooter><Button variant="outline" onClick={()=>setOuvert(false)}>Annuler</Button><Button disabled={!valide||enregistrement} onClick={()=>void creer()}>{enregistrement&&<LoaderCircle className="animate-spin"/>}Publier l’offre</Button></DialogFooter></DialogContent></Dialog>
     <Dialog open={Boolean(offreACompleter)} onOpenChange={(ouvertCalcul)=>{if(!ouvertCalcul)setOffreACompleter(null);}}><DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-4xl"><DialogHeader><DialogTitle>Compléter la tarification {offreACompleter?.reference}</DialogTitle><DialogDescription>Contrôlez les montants proposés par le barème Royal Onyx et complétez les lignes manquantes. Le total TTC est recalculé côté serveur.</DialogDescription></DialogHeader><div className="space-y-3">{lignesTarification.map((ligne,index)=><div className="grid gap-3 rounded-xl border p-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(120px,.7fr)_minmax(0,1fr)_minmax(0,1fr)]" key={`${ligne.code??ligne.libelle}-${index}`}><label><Label>Garantie</Label><Input value={ligne.libelle} onChange={(event)=>setLignesTarification((courantes)=>courantes.map((item,position)=>position===index?{...item,libelle:event.target.value}:item))}/></label><label><Label>Prime (FCFA)</Label><Input type="number" min="0" value={ligne.prime_xaf} onChange={(event)=>setLignesTarification((courantes)=>courantes.map((item,position)=>position===index?{...item,prime_xaf:Number(event.target.value||0)}:item))}/></label><label><Label>Capital</Label><Input value={ligne.capital_montant??""} onChange={(event)=>setLignesTarification((courantes)=>courantes.map((item,position)=>position===index?{...item,capital_montant:event.target.value||null}:item))}/></label><label><Label>Franchise</Label><Input value={ligne.franchise??""} onChange={(event)=>setLignesTarification((courantes)=>courantes.map((item,position)=>position===index?{...item,franchise:event.target.value||null}:item))}/></label></div>)}</div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{([['accessoires','Accessoires'],['asac','Fichier ASAC'],['cemac','Carte CEMAC'],['dta','DTA'],['autres','Autres frais']] as const).map(([cle,libelle])=><label key={cle}><Label>{libelle}</Label><Input type="number" min="0" value={fraisTarification[cle]} onChange={(event)=>setFraisTarification((courants)=>({...courants,[cle]:event.target.value}))}/></label>)}</div><div className="rounded-xl border bg-slate-50 p-4 text-sm"><strong>Règle appliquée :</strong> prime nette = somme des garanties; base taxable = prime nette + accessoires + fichier ASAC; taxe = 19,25 % de cette base; total TTC = base + taxe + carte CEMAC + DTA + autres frais.</div><DialogFooter><Button variant="outline" onClick={()=>setOffreACompleter(null)}>Annuler</Button><Button disabled={finalisation||lignesTarification.length===0||lignesTarification.some((ligne)=>!ligne.libelle.trim()||ligne.prime_xaf<0)} onClick={()=>void finaliserTarification()}>{finalisation&&<LoaderCircle className="animate-spin"/>}Enregistrer le calcul</Button></DialogFooter></DialogContent></Dialog>
   </CardContent></Card>;
@@ -897,7 +1053,7 @@ function RequestDetailView({ reference, version, utilisateur, onBack }: { refere
       {!peutTraiter&&<div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"><LockKeyhole className="shrink-0"/><span>{detail.responsable?`Seul ${detail.responsable.nom_complet}, responsable de ce dossier, peut le traiter.`:"Vous devez prendre cette demande en charge avant de valider ses documents, préparer des offres ou répondre au client."}</span></div>}
       <div className="request-page-grid"><main className="request-page-main"><FicheDemandeClient demande={detail} peutDeciderDocuments={peutTraiter} onActualiser={async()=>appliquer(await apiBackoffice.obtenirDemande(reference))}/><DiscussionDemandePanel reference={reference} peutRepondre={peutTraiter}/></main><aside className="request-page-aside">
         <Card className="request-page-panel"><CardContent className="p-0"><p className="eyebrow">Prise en charge</p>{detail.responsable?<><div className="request-owner"><div><span>Responsable actuel</span><strong>{estResponsable?"Vous":detail.responsable.nom_complet}</strong><small>{detail.prise_en_charge_le&&`Depuis le ${new Date(detail.prise_en_charge_le).toLocaleString("fr-FR",{dateStyle:"medium",timeStyle:"short"})}`}</small></div>{estGestionnaire&&<Button variant="outline" disabled={Boolean(actionEnCours)} onClick={()=>void liberer()}>{actionEnCours==="liberation"&&<LoaderCircle className="animate-spin"/>}Libérer</Button>}</div>{estResponsable&&!estGestionnaire&&<p className="request-lock-note"><LockKeyhole/>Cette prise en charge est définitive. Seul un administrateur peut libérer ou réaffecter la demande.</p>}</>:<div className="request-claim"><div><strong>Cette demande est dans la file commune.</strong><span>Le premier utilisateur qui la prend devient définitivement son responsable.</span></div><Button disabled={Boolean(actionEnCours)} onClick={()=>void prendreEnCharge()}>{actionEnCours==="prise"&&<LoaderCircle className="animate-spin"/>}Prendre en charge</Button></div>}{detail.responsable&&estGestionnaire&&<div className="request-reassign"><Label>Réaffectation exceptionnelle</Label><Select value={responsableCible} onValueChange={setResponsableCible}><SelectTrigger className="w-full"><SelectValue placeholder="Choisir un responsable"/></SelectTrigger><SelectContent>{intervenants.map((intervenant)=><SelectItem key={intervenant.id} value={intervenant.id}>{intervenant.nom_complet} · {libellesRoles[intervenant.role]}</SelectItem>)}</SelectContent></Select><Textarea value={motifReaffectation} onChange={(event)=>setMotifReaffectation(event.target.value)} placeholder="Motif obligatoire de la réaffectation"/><Button disabled={!responsableCible||responsableCible===detail.responsable.id||motifReaffectation.trim().length<3||Boolean(actionEnCours)} onClick={()=>void reaffecter()}>{actionEnCours==="reaffectation"&&<LoaderCircle className="animate-spin"/>}Réaffecter</Button></div>}</CardContent></Card>
-        <OffresDemandePanel reference={reference} statutDemande={detail.statut} version={version} peutCreer={peutTraiter} onActualiserDemande={async()=>appliquer(await apiBackoffice.obtenirDemande(reference))}/>
+        <OffresDemandePanel reference={reference} statutDemande={detail.statut} modePreparation={detail.mode_preparation} produit={detail.produit} sousType={detail.sous_type} version={version} peutCreer={peutTraiter} onActualiserDemande={async()=>appliquer(await apiBackoffice.obtenirDemande(reference))}/>
         <Card className="request-page-panel"><CardContent className="p-0"><p className="eyebrow">Avancement automatique</p><ParcoursDemande statut={detail.statut}/></CardContent></Card>
       </aside></div>
     </>}

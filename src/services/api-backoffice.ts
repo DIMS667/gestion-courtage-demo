@@ -80,7 +80,7 @@ export type MessageConversationBackoffice = {
 export type OffreAssuranceBackoffice = {
   id: string;
   compagnie_id: string | null;
-  origine: "manuelle" | "automatique";
+  origine: "manuelle" | "automatique" | "assistee";
   bareme_id: string | null;
   formule_tarifaire_code: string | null;
   detail_calcul: Record<string, unknown>;
@@ -121,6 +121,37 @@ export type TarificationOffre = {
   carte_cemac_xaf: number;
   dta_xaf: number;
   autres_frais_xaf: number;
+};
+
+export type GarantieCatalogueOffre = {
+  code: string;
+  libelle: string;
+  obligatoire: boolean;
+};
+
+export type CatalogueOffreAssistee = {
+  compagnie_id: string;
+  compagnie_nom: string;
+  bareme_code: string;
+  categories: string[];
+  durees_mois: number[];
+  garanties: GarantieCatalogueOffre[];
+  durees_par_categorie: Record<string, number[]>;
+  garanties_par_categorie: Record<string, GarantieCatalogueOffre[]>;
+};
+
+export type OffreAssisteeCreation = {
+  compagnie_id: string;
+  usage: string;
+  energie: "essence" | "diesel";
+  puissance_fiscale: number;
+  nombre_places: number;
+  zone_circulation: "A" | "B" | "C";
+  possede_remorque: boolean;
+  duree_mois: number;
+  date_effet: string;
+  garanties: string[];
+  recommandee: boolean;
 };
 
 export type CompagniePartenaireResume = {
@@ -801,6 +832,19 @@ export const apiBackoffice = {
   }) {
     return appeler<OffreAssuranceBackoffice>(
       `/backoffice/demandes-clients/${encodeURIComponent(reference)}/offres`,
+      { method: "POST", body: JSON.stringify(entree) },
+    );
+  },
+
+  listerCatalogueOffresAssistees(reference: string) {
+    return appeler<CatalogueOffreAssistee[]>(
+      `/backoffice/demandes-clients/${encodeURIComponent(reference)}/offres-assistees/catalogue`,
+    );
+  },
+
+  creerOffreAssistee(reference: string, entree: OffreAssisteeCreation) {
+    return appeler<OffreAssuranceBackoffice>(
+      `/backoffice/demandes-clients/${encodeURIComponent(reference)}/offres-assistees`,
       { method: "POST", body: JSON.stringify(entree) },
     );
   },
