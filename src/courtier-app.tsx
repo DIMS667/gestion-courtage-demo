@@ -64,7 +64,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
 import { Claim, DemoData, Opportunity, Policy, Proposal, companies, products, users } from "@/src/demo-data";
 import { PartenairesView } from "@/src/partenaires-view";
-import { apiBackoffice, CatalogueOffreAssistee, CLE_SYNCHRONISATION_SESSION_BACKOFFICE, ClientBackoffice, CompagniePartenaireResume, ContratAssuranceBackoffice, DetailDemandeClient, DetailSinistre, enregistrerSession, EVENEMENT_SESSION_BACKOFFICE_MODIFIEE, IntervenantDemande, LigneGarantiePolice, LigneTarificationOffre, MessageConversationBackoffice, MotifCorrectionDocument, OffreAssuranceBackoffice, OffreAssisteeCreation, oublierSession, PaiementCampayBackoffice, RapportActiviteBackoffice, ReponseAuthentification, ResumeDemandeClient, ResumeSinistre, RoleBackoffice, sessionBackofficeDoitEtreSynchronisee, StatutBackoffice, StatutDemande, StatutSinistre, TableauDeBordBackoffice, UtilisateurBackoffice } from "@/src/services/api-backoffice";
+import { apiBackoffice, CatalogueOffreAssistee, CLE_SYNCHRONISATION_SESSION_BACKOFFICE, ClientBackoffice, CompagniePartenaireResume, ContratAssuranceBackoffice, DetailDemandeClient, DetailSinistre, enregistrerSession, EVENEMENT_SESSION_BACKOFFICE_MODIFIEE, IntervenantDemande, LigneGarantiePolice, LigneTarificationOffre, MessageConversationBackoffice, MotifCorrectionDocument, OffreAssuranceBackoffice, OffreAssisteeCreation, oublierSession, PaiementCampayBackoffice, RapportActiviteBackoffice, ReponseAuthentification, ResumeDemandeClient, ResumeSinistre, RoleBackoffice, sessionBackofficeDoitEtreSynchronisee, StatutBackoffice, StatutDemande, StatutSinistre, SuiviFractionnement, TableauDeBordBackoffice, UtilisateurBackoffice } from "@/src/services/api-backoffice";
 import { initialiserAlerteSonore, jouerAlerteSonore } from "@/src/services/notification-sound";
 
 const money = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XAF", maximumFractionDigits: 0 });
@@ -403,6 +403,13 @@ const libellesValeurs:Record<string,string>={nouveau_vehicule:"Nouveau véhicule
 const normaliserChamp=(champ:string)=>champ.replace(/([a-z0-9])([A-Z])/g,"$1_$2").toLowerCase();
 const libelleChamp=(champ:string)=>{const normalise=normaliserChamp(champ);return libellesChamps[normalise]??normalise.replaceAll("_"," ").replace(/^./,(lettre)=>lettre.toUpperCase());};
 const objetDemande=(valeur:unknown):Record<string,unknown>=>typeof valeur==="object"&&valeur!==null&&!Array.isArray(valeur)?valeur as Record<string,unknown>:{};
+const professionsConducteur:Record<string,string>={delegue_medical:"Délégué médical",delegue_inspecteur_commercial:"Délégué ou inspecteur commercial",publicite:"Publiciste, agence ou agent de publicité",agent_attache_delegue_commercial:"Agent, attaché ou délégué commercial",inspecteur_voyageur_commerce:"Inspecteur commercial ou voyageur de commerce",representant_inspecteur_ventes:"Représentant commercial ou inspecteur des ventes",photographe_reporter:"Photographe reporter",gardiennage_securite:"Société de gardiennage ou de sécurité",boulangerie:"Boulangerie",clerge:"Membre du clergé",autre:"Autre profession"};
+function informationsConducteur(valeur:unknown):Record<string,unknown>{
+  const donnees=objetDemande(valeur);
+  const {categorie_professionnelle:categorie,...conducteur}=donnees;
+  const profession=typeof conducteur.profession==="string"?conducteur.profession.trim():"";
+  return {...conducteur,profession:profession||(typeof categorie==="string"?professionsConducteur[categorie]:undefined)};
+}
 const champsSinistreMasques=new Set(["client_number","police_report_by","gendarmerie","brigade"]);
 const libellesElementsListe:Record<string,string>={witnesses:"Témoin",circumstances:"Circonstance",injuries_in_vehicle:"Personne blessée",other_injuries:"Personne blessée"};
 const champsAffichables=(valeur:Record<string,unknown>)=>Object.entries(valeur).filter(([champ,contenu])=>!champsSinistreMasques.has(normaliserChamp(champ))&&!(normaliserChamp(champ)==="annee"&&valeur.date_premiere_mise_circulation)&&contenu!==null&&contenu!==undefined&&contenu!=="");
@@ -529,14 +536,14 @@ function ParcoursSinistre({ statut }: { statut:StatutSinistre }) {
 
 function FicheDemandeClient({ demande, peutDeciderDocuments, onActualiser }: { demande:DetailDemandeClient; peutDeciderDocuments:boolean; onActualiser:()=>Promise<void> }) {
   const donnees=demande.donnees;
-  const conducteur=objetDemande(donnees.conducteur);
+  const conducteur=informationsConducteur(donnees.conducteur);
   const vehicule=objetDemande(donnees.vehicule);
   const couverture=objetDemande(donnees.couverture);
   const documents=Array.isArray(donnees.documents)?donnees.documents:Array.isArray(donnees.pieces_jointes)?donnees.pieces_jointes:[];
   const besoin={type_besoin:donnees.type_besoin,precision_autre_besoin:donnees.precision_autre_besoin,message_delegation:donnees.message_delegation,possede_vignette:donnees.possede_vignette};
   const champsDejaAffiches=new Set(["souscripteur","assure","conducteur","vehicule","couverture","documents","pieces_jointes","type_besoin","precision_autre_besoin","message_delegation","possede_vignette"]);
   const informationsComplementaires=Object.fromEntries(Object.entries(donnees).filter(([champ])=>!champsDejaAffiches.has(champ)));
-  return <div className="request-dossier-content"><section className="request-client-card"><div className="request-client-avatar">{demande.client.nom_complet.split(" ").slice(0,2).map((partie)=>partie[0]).join("")}</div><div><p className="eyebrow">Client</p><h3>{demande.client.nom_complet}</h3><span>{demande.client.adresse_email} · {demande.client.numero_telephone}</span></div></section><section><p className="eyebrow">Informations du client</p><div className="request-info-stack"><GroupeInformations titre="Souscripteur" donnees={objetDemande(donnees.souscripteur)}/><GroupeInformations titre="Assuré" donnees={objetDemande(donnees.assure)}/><GroupeInformations titre="Conducteur" donnees={conducteur}/><article className="request-info-group"><h4>Documents du client</h4><ListeDocumentsClient documents={documents} demandeReference={demande.reference} peutDecider={peutDeciderDocuments} onActualiser={onActualiser}/></article></div></section><section><p className="eyebrow">Informations de la demande</p><div className="request-info-stack"><GroupeInformations titre="Besoin exprimé" donnees={besoin}/><GroupeInformations titre="Véhicule" donnees={vehicule}/><GroupeInformations titre="Couverture et garanties" donnees={couverture}/><GroupeInformations titre="Informations complémentaires" donnees={informationsComplementaires}/></div></section></div>;
+  return <div className="request-dossier-content"><section className="request-client-card"><div className="request-client-avatar">{demande.client.nom_complet.split(" ").slice(0,2).map((partie)=>partie[0]).join("")}</div><div><p className="eyebrow">Client</p><h3>{demande.client.nom_complet}</h3><span>{demande.client.adresse_email} · {demande.client.numero_telephone}</span></div></section><section><p className="eyebrow">Informations du client</p><div className="request-info-stack"><GroupeInformations titre="Souscripteur" donnees={objetDemande(donnees.souscripteur)}/><GroupeInformations titre="Assuré" donnees={objetDemande(donnees.assure)}/><GroupeInformations titre="Conducteur habituel" donnees={conducteur}/><article className="request-info-group"><h4>Documents du client</h4><ListeDocumentsClient documents={documents} demandeReference={demande.reference} peutDecider={peutDeciderDocuments} onActualiser={onActualiser}/></article></div></section><section><p className="eyebrow">Informations de la demande</p><div className="request-info-stack"><GroupeInformations titre="Besoin exprimé" donnees={besoin}/><GroupeInformations titre="Véhicule" donnees={vehicule}/><GroupeInformations titre="Couverture et garanties" donnees={couverture}/><GroupeInformations titre="Informations complémentaires" donnees={informationsComplementaires}/></div></section></div>;
 }
 
 function RequestsView({ version, utilisateur, onOpen }: { version: number; utilisateur: UtilisateurBackoffice; onOpen:(reference:string)=>void }) {
@@ -628,6 +635,16 @@ const composantesBcare = [
   ["tva_majoration_xaf", "TVA sur la majoration"],
 ] as const;
 
+function CapitauxPersonnesGarantie({valeur}:{valeur:unknown}) {
+  const capitaux=objetDemande(valeur);
+  const lignes=([['deces_xaf','Décès'],['invalidite_xaf','Invalidité'],['frais_traitement_xaf','Frais de traitement']] as const).flatMap(([cle,libelle])=>{
+    const montant=capitaux[cle];
+    return typeof montant==="number"&&Number.isFinite(montant)&&montant>=0?[{cle,libelle,montant}]:[];
+  });
+  if(!lignes.length)return null;
+  return <dl className="mt-2 space-y-1 rounded-md bg-slate-50 p-2 text-xs">{lignes.map((ligne)=><div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1" key={ligne.cle}><dt className="text-muted-foreground">{ligne.libelle}</dt><dd className="font-semibold tabular-nums">{money.format(ligne.montant)}</dd></div>)}</dl>;
+}
+
 function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSelectionEnvoi, onCompleter }: { offre: OffreAssuranceBackoffice; peutTransmettre:boolean; selectionneePourEnvoi: boolean; onSelectionEnvoi: (offreId:string, selectionnee:boolean)=>void; onCompleter:(offre:OffreAssuranceBackoffice)=>void }) {
   const automatique = offre.origine === "automatique";
   const assistee = offre.origine === "assistee";
@@ -639,6 +656,7 @@ function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSe
   const bareme = lireTexteCalcul(offre.detail_calcul, "bareme_code") ?? offre.bareme_id;
   const moteur = lireTexteCalcul(offre.detail_calcul, "moteur");
   const calculIncomplet = offre.detail_calcul.calcul_complet === false;
+  const correctionRc = offre.detail_calcul.correction_rc;
 
   return (
     <article className={`overflow-hidden rounded-xl border ${brouillonTarife ? "border-amber-300 bg-amber-50/40" : tarifee ? "border-blue-200 bg-blue-50/30" : "bg-background"}`}>
@@ -682,7 +700,7 @@ function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSe
       </div>
 
       <div className="space-y-4 p-4">
-        {tarifee && (lignesCalcul.length > 0 || garantiesTarifees.length > 0 || beneficiairesBcare.length > 0) && (
+        {tarifee && (lignesCalcul.length > 0 || garantiesTarifees.length > 0 || beneficiairesBcare.length > 0 || correctionRc) && (
           <details className="group overflow-hidden rounded-lg border border-blue-100 bg-white">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3">
               <span className="flex items-center gap-2">
@@ -695,6 +713,18 @@ function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSe
               </span>
             </summary>
             <div className="space-y-3 border-t border-blue-100 p-3">
+              {correctionRc && (
+                <section className="rounded-lg border border-blue-100 bg-blue-50/50 p-3">
+                  <strong className="text-sm">Responsabilité civile — profil du conducteur</strong>
+                  <p className="mt-1 text-xs text-muted-foreground">Situation appréciée au {displayDate(correctionRc.date_reference)}. Le montant de RC retenu est déjà compris dans la prime nette.</p>
+                  <dl className="mt-3 grid gap-2 text-sm">
+                    <div className="flex flex-wrap justify-between gap-2"><dt>RC avant correction</dt><dd className="font-semibold tabular-nums">{money.format(correctionRc.prime_initiale_xaf)}</dd></div>
+                    <div className="flex flex-wrap justify-between gap-2"><dt>{correctionRc.taux_pourcent > 0 ? `Majoration de ${correctionRc.taux_pourcent} %` : correctionRc.taux_pourcent < 0 ? `Réduction de ${Math.abs(correctionRc.taux_pourcent)} %` : "Tarif normal"}</dt><dd className="font-semibold tabular-nums">{correctionRc.montant_xaf > 0 ? "+" : ""}{money.format(correctionRc.montant_xaf)}</dd></div>
+                    <div className="flex flex-wrap justify-between gap-2 border-t border-blue-100 pt-2"><dt className="font-semibold">RC retenue</dt><dd className="font-bold tabular-nums">{money.format(correctionRc.prime_corrigee_xaf)}</dd></div>
+                  </dl>
+                  {correctionRc.motifs.length > 0 && <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-muted-foreground">{correctionRc.motifs.map((motif,index)=><li key={`${motif}-${index}`}>{motif}</li>)}</ul>}
+                </section>
+              )}
               {lignesCalcul.length > 0 && (
                 <div className="grid gap-2 sm:grid-cols-2">
                   {lignesCalcul.map((ligne) => (
@@ -718,7 +748,7 @@ function CarteOffreDemande({ offre, peutTransmettre, selectionneePourEnvoi, onSe
                       const type=garantie.statut_calcul==="a_completer"?"À compléter":garantie.type==="obligatoire_incluse"?"Obligatoire · incluse":"Calculée";
                       const montant=lireNombreCalcul(garantie,"prime_xaf")??lireNombreCalcul(garantie,"montant_xaf");
                       const note=typeof garantie.note==="string"?garantie.note:"";
-                      return <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 px-3 py-3 text-sm" key={`${String(garantie.code??libelle)}-${index}`}><div><strong className="block">{libelle}</strong><span className="text-xs text-muted-foreground">{type}{note?` · ${note}`:""}</span></div><strong className="whitespace-nowrap text-right">{montant===null?"À saisir":money.format(montant)}</strong></div>;
+                      return <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 px-3 py-3 text-sm" key={`${String(garantie.code??libelle)}-${index}`}><div className="min-w-0"><strong className="block">{libelle}</strong><span className="text-xs text-muted-foreground">{type}{note?` · ${note}`:""}</span><CapitauxPersonnesGarantie valeur={garantie.capitaux_personnes}/></div><strong className="whitespace-nowrap text-right">{montant===null?"À saisir":money.format(montant)}</strong></div>;
                     })}
                   </div>
                 </div>
@@ -792,6 +822,10 @@ type FormulaireOffreAssistee = {
   possedeRemorque:boolean;
   dureeMois:string;
   dateEffet:string;
+  categorieProfession:OffreAssisteeCreation["conducteur"]["categorie_professionnelle"]|"";
+  professionAutre:string;
+  dateNaissance:string;
+  permisDelivreLe:string;
   garanties:string[];
   recommandee:boolean;
 };
@@ -806,11 +840,110 @@ const formulaireOffreAssisteeVide = ():FormulaireOffreAssistee => ({
   possedeRemorque:false,
   dureeMois:"",
   dateEffet:"",
+  categorieProfession:"",
+  professionAutre:"",
+  dateNaissance:"",
+  permisDelivreLe:"",
   garanties:[],
   recommandee:true,
 });
 
-function OffresDemandePanel({ reference, statutDemande, modePreparation, produit, sousType, peutCreer, version, onActualiserDemande }: { reference:string; statutDemande:StatutDemande; modePreparation:"saisie_directe"|"delegation_courtier"; produit:string; sousType:"voiture"|"moto_deux_trois_roues"|null; peutCreer:boolean; version:number; onActualiserDemande:()=>Promise<void> }) {
+function dateLocaleCourante() {
+  const maintenant=new Date();
+  return new Date(maintenant.getTime()-maintenant.getTimezoneOffset()*60_000).toISOString().slice(0,10);
+}
+
+function dateIsoValide(valeur:string) {
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(valeur))return false;
+  const date=new Date(`${valeur}T00:00:00Z`);
+  return !Number.isNaN(date.getTime())&&date.toISOString().slice(0,10)===valeur;
+}
+
+function erreurProfilOffreAssistee(formulaire:FormulaireOffreAssistee) {
+  if(!formulaire.categorieProfession)return "Choisissez la profession du conducteur habituel.";
+  if(formulaire.categorieProfession==="autre"&&!formulaire.professionAutre.trim())return "Précisez le métier réel du conducteur habituel.";
+  if(!formulaire.dateNaissance||!formulaire.permisDelivreLe)return "Renseignez la date de naissance et la date d’obtention initiale du permis.";
+  const aujourdhui=dateLocaleCourante();
+  if(!dateIsoValide(formulaire.dateNaissance)||formulaire.dateNaissance>=aujourdhui)return "La date de naissance doit être une date passée valide.";
+  if(!dateIsoValide(formulaire.permisDelivreLe)||formulaire.permisDelivreLe>aujourdhui)return "La date d’obtention initiale du permis ne peut pas être future.";
+  if(formulaire.permisDelivreLe<=formulaire.dateNaissance)return "L’obtention du permis doit être postérieure à la naissance.";
+  if(formulaire.dateEffet&&dateIsoValide(formulaire.dateEffet)){
+    if(formulaire.dateEffet<=formulaire.dateNaissance)return "La date d’effet doit être postérieure à la naissance du conducteur.";
+    if(formulaire.permisDelivreLe>formulaire.dateEffet)return "Le permis doit avoir été obtenu au plus tard à la date d’effet.";
+  }
+  return null;
+}
+
+const libellesModesPaiement:Record<string,string>={especes:"Espèces",virement:"Virement",mtn_momo:"MTN MoMo",orange_money:"Orange Money",mobile_money:"Mobile Money"};
+type FormulairePaiementManuel={mode:""|Parameters<typeof apiBackoffice.enregistrerPaiementManuel>[0]["mode_paiement"];reference:string;date:string};
+
+function erreurPaiementManuel(formulaire:FormulairePaiementManuel) {
+  if(!formulaire.mode)return "Choisissez le moyen de paiement.";
+  if(!dateIsoValide(formulaire.date)||formulaire.date>dateLocaleCourante())return "Indiquez une date de paiement valide, au plus tard aujourd’hui.";
+  if(!formulaire.reference.trim())return "Renseignez la référence de transaction ou du reçu.";
+  if(formulaire.reference.trim().length>120)return "La référence ne doit pas dépasser 120 caractères.";
+  return null;
+}
+
+function SuiviReglementAnnuel({suivi}:{suivi:SuiviFractionnement}) {
+  return <section aria-label="Suivi des règlements de l’année" className="mt-3 space-y-3 rounded-xl border border-emerald-200 bg-white/70 p-3 text-xs text-emerald-950">
+    <div className="flex flex-wrap items-center justify-between gap-2"><strong>Année du {displayDate(suivi.annee_debut)} au {displayDate(suivi.annee_fin)}</strong><Badge variant="outline">{suivi.termine?"Année réglée":suivi.total_encaisse_xaf>0?"Règlement partiel":"Aucun versement"}</Badge></div>
+    <dl className="grid gap-3 sm:grid-cols-2"><div><dt>Prime TTC annuelle</dt><dd className="mt-1 font-semibold">{money.format(suivi.prime_annuelle_xaf)}</dd></div><div><dt>Total versé</dt><dd className="mt-1 font-semibold">{money.format(suivi.total_encaisse_xaf)}</dd></div><div><dt>Plafond annuel de 105 %</dt><dd className="mt-1 font-semibold">{money.format(suivi.plafond_xaf)}</dd></div><div><dt>Marge disponible sous le plafond</dt><dd className="mt-1 font-semibold">{money.format(suivi.solde_plafond_xaf)}</dd></div></dl>
+    {suivi.surcout_fractionnement_xaf>0&&<p>Coût du fractionnement déjà compris dans les versements : <strong>{money.format(suivi.surcout_fractionnement_xaf)}</strong>.</p>}
+    <p className="text-emerald-800">Le plafond est un maximum autorisé. La marge disponible n’est pas une somme à encaisser obligatoirement.</p>
+  </section>;
+}
+
+function PeriodeReglement({paiement}:{paiement:PaiementCampayBackoffice}) {
+  if(paiement.fraction_duree_mois==null)return null;
+  const debut=paiement.detail_fraction?.date_debut;
+  const fin=paiement.detail_fraction?.date_fin;
+  return <small className="block text-xs text-muted-foreground">Fraction de {paiement.fraction_duree_mois} mois{debut&&fin?` · du ${displayDate(debut)} au ${displayDate(fin)}`:""}</small>;
+}
+
+function DialoguePaiementManuel({demandeReference,offre,suivi:suiviRecu=null,onFermer,onConfirme}:{demandeReference:string;offre:OffreAssuranceBackoffice;suivi?:SuiviFractionnement|null;onFermer:()=>void;onConfirme:(paiement:PaiementCampayBackoffice)=>void}) {
+  const [formulaire,setFormulaire]=useState<FormulairePaiementManuel>({mode:"",reference:"",date:dateLocaleCourante()});
+  const suivi=suiviRecu?.offre_id===offre.id?suiviRecu:null;
+  const [etatInitial]=useState(()=>({mois:suivi?.mois_regles??0,total:suivi?.total_encaisse_xaf??0}));
+  const [periode,setPeriode]=useState(()=>suivi&&suivi.mois_regles>0?String(suivi.fractions[0]?.duree_mois??""):"integral");
+  const [enregistrement,setEnregistrement]=useState(false);
+  const [erreur,setErreur]=useState("");
+  const operationRef=useRef(false);
+  const titrePaiementRef=useRef<HTMLHeadingElement>(null);
+  const erreurValidation=erreurPaiementManuel(formulaire);
+  const integralAutorise=!suivi||(suivi.mois_regles===0&&suivi.total_encaisse_xaf===0&&!suivi.termine);
+  const fraction=suivi?.fractions.find((item)=>String(item.duree_mois)===periode);
+  const echeancierModifie=Boolean(suivi&&(suivi.mois_regles!==etatInitial.mois||suivi.total_encaisse_xaf!==etatInitial.total));
+  const periodeValide=!echeancierModifie&&(periode==="integral"?integralAutorise:Boolean(fraction&&!suivi?.termine));
+  const montant=periode==="integral"?offre.prime_xaf:fraction?.montant_xaf;
+  const enregistrer=async()=>{
+    const mode=formulaire.mode;
+    if(!mode||erreurValidation||!periodeValide||montant===undefined||operationRef.current)return;
+    operationRef.current=true;
+    setEnregistrement(true);
+    setErreur("");
+    try{
+      const paiement=await apiBackoffice.enregistrerPaiementManuel({demande_reference:demandeReference,offre_id:offre.id,mode_paiement:mode,reference_transaction:formulaire.reference.trim(),date_paiement:formulaire.date,...(fraction&&periode!=="integral"?{fraction_debut_mois:fraction.mois_debut,fraction_duree_mois:fraction.duree_mois}:{})});
+      toast.success(`Paiement ${paiement.reference} confirmé : ${money.format(paiement.montant_xaf)}.`);
+      onConfirme(paiement);
+    }catch(cause){setErreur(cause instanceof Error?cause.message:"Le paiement n’a pas pu être enregistré.");}
+    finally{operationRef.current=false;setEnregistrement(false);}
+  };
+  return <Dialog open onOpenChange={(ouvert)=>{if(!ouvert&&!enregistrement)onFermer();}}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg" onOpenAutoFocus={(event)=>{event.preventDefault();titrePaiementRef.current?.focus({preventScroll:true});}}><DialogHeader><DialogTitle ref={titrePaiementRef} tabIndex={-1} className="outline-none">Enregistrer le paiement</DialogTitle><DialogDescription>Confirmez le règlement reçu pour l’offre choisie par le client.</DialogDescription></DialogHeader><form className="space-y-4" onSubmit={(event)=>{event.preventDefault();void enregistrer();}}>
+    {suivi&&<SuiviReglementAnnuel suivi={suivi}/>}
+    {echeancierModifie&&<p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Un autre règlement vient d’être enregistré. Fermez ce formulaire puis rouvrez-le pour vérifier la prochaine période.</p>}
+    {suivi&&<div className="grid gap-2"><Label htmlFor="paiement-periode">Durée à régler *</Label><Select value={periode} disabled={enregistrement||suivi.termine} onValueChange={setPeriode}><SelectTrigger id="paiement-periode" className="w-full"><SelectValue placeholder="Choisir la période"/></SelectTrigger><SelectContent>{integralAutorise&&<SelectItem value="integral">Paiement intégral de l’année</SelectItem>}{suivi.fractions.filter((item)=>!(integralAutorise&&item.duree_mois===12)).map((item)=><SelectItem key={`${item.mois_debut}-${item.duree_mois}`} value={String(item.duree_mois)}>{item.duree_mois} mois · {money.format(item.montant_xaf)}</SelectItem>)}</SelectContent></Select>{fraction&&<p className="text-xs text-muted-foreground">Du {displayDate(fraction.debut)} au {displayDate(fraction.fin)}.</p>}{fraction&&fraction.ajustement_plafond_xaf>0&&<p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-900">Montant limité au solde du plafond annuel. Ajustement : {money.format(fraction.ajustement_plafond_xaf)}.</p>}{suivi.termine&&<p role="status" className="text-sm">Cette année est réglée. Aucun versement supplémentaire n’est nécessaire.</p>}{!suivi.termine&&!integralAutorise&&suivi.fractions.length===0&&<p role="alert" className="text-sm text-destructive">Aucune durée restante ne dispose d’un tarif vérifié.</p>}</div>}
+    <div className="grid gap-3 rounded-xl border bg-slate-50 p-4 sm:grid-cols-2"><div className="grid gap-2"><Label htmlFor="paiement-offre">Offre choisie</Label><Input id="paiement-offre" value={offre.reference} readOnly/></div><div className="grid gap-2"><Label htmlFor="paiement-montant">Montant TTC à enregistrer</Label><Input id="paiement-montant" value={montant===undefined?"—":money.format(montant)} readOnly className="font-semibold"/></div></div>
+    <div className="grid gap-2"><Label htmlFor="paiement-mode">Moyen de paiement *</Label><Select value={formulaire.mode} disabled={enregistrement} onValueChange={(mode)=>setFormulaire((courant)=>({...courant,mode:mode as FormulairePaiementManuel["mode"]}))}><SelectTrigger id="paiement-mode" className="w-full" aria-required="true"><SelectValue placeholder="Choisir le moyen de paiement"/></SelectTrigger><SelectContent>{["especes","virement","mtn_momo","orange_money"].map((mode)=><SelectItem key={mode} value={mode}>{libellesModesPaiement[mode]}</SelectItem>)}</SelectContent></Select></div>
+    <div className="grid gap-2"><Label htmlFor="paiement-date">Date du paiement *</Label><Input id="paiement-date" type="date" required max={dateLocaleCourante()} value={formulaire.date} disabled={enregistrement} onChange={(event)=>setFormulaire((courant)=>({...courant,date:event.target.value}))}/></div>
+    <div className="grid gap-2"><Label htmlFor="paiement-reference">Référence de transaction ou du reçu *</Label><Input id="paiement-reference" required maxLength={120} value={formulaire.reference} disabled={enregistrement} onChange={(event)=>setFormulaire((courant)=>({...courant,reference:event.target.value}))}/></div>
+    {formulaire.mode&&erreurValidation&&<p className="text-sm text-muted-foreground" role="status">{erreurValidation}</p>}
+    {erreur&&<p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive" role="alert">{erreur}</p>}
+    <DialogFooter><Button type="button" variant="outline" disabled={enregistrement} onClick={onFermer}>Annuler</Button><Button type="submit" disabled={Boolean(erreurValidation)||!periodeValide||enregistrement}>{enregistrement&&<LoaderCircle className="animate-spin"/>}Confirmer le paiement</Button></DialogFooter>
+  </form></DialogContent></Dialog>;
+}
+
+function OffresDemandePanel({ reference, statutDemande, modePreparation, produit, sousType, conducteur, peutCreer, version, onActualiserDemande }: { reference:string; statutDemande:StatutDemande; modePreparation:"saisie_directe"|"delegation_courtier"; produit:string; sousType:"voiture"|"moto_deux_trois_roues"|null; conducteur:Record<string,unknown>; peutCreer:boolean; version:number; onActualiserDemande:()=>Promise<void> }) {
   const [offres,setOffres]=useState<OffreAssuranceBackoffice[]>([]);
   const [compagnies,setCompagnies]=useState<CompagniePartenaireResume[]>([]);
   const [chargement,setChargement]=useState(true);
@@ -819,6 +952,14 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
   const [selectionEnvoi,setSelectionEnvoi]=useState<string[]>([]);
   const [transmission,setTransmission]=useState(false);
   const [preparationContrat,setPreparationContrat]=useState(false);
+  const [offrePaiement,setOffrePaiement]=useState<OffreAssuranceBackoffice|null>(null);
+  const [paiementsDemande,setPaiementsDemande]=useState<PaiementCampayBackoffice[]>([]);
+  const [versionPaiements,setVersionPaiements]=useState<number|null>(null);
+  const [erreurPaiements,setErreurPaiements]=useState("");
+  const [echeancier,setEcheancier]=useState<SuiviFractionnement|null>(null);
+  const [operationEcheancier,setChargementEcheancier]=useState(false);
+  const [cleEcheancierChargee,setCleEcheancierChargee]=useState("");
+  const [erreurEcheancierStockee,setErreurEcheancier]=useState("");
   const [generation,setGeneration]=useState(false);
   const [offreACompleter,setOffreACompleter]=useState<OffreAssuranceBackoffice|null>(null);
   const [lignesTarification,setLignesTarification]=useState<LigneTarificationOffre[]>([]);
@@ -835,6 +976,7 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
 
   const charger=async()=>{try{setOffres(await apiBackoffice.listerOffresDemande(reference));setSelectionEnvoi([]);}catch(cause){toast.error(cause instanceof Error?cause.message:"Impossible de charger les offres.");}finally{setChargement(false);}};
   useEffect(()=>{let actif=true;apiBackoffice.listerOffresDemande(reference).then((liste)=>{if(actif){setOffres(liste);setSelectionEnvoi([]);}}).catch((cause)=>{if(actif)toast.error(cause instanceof Error?cause.message:"Impossible de charger les offres.");}).finally(()=>{if(actif)setChargement(false);});return()=>{actif=false};},[reference,version]);
+  useEffect(()=>{let actif=true;apiBackoffice.listerPaiementsReels().then((liste)=>{if(actif){setPaiementsDemande(liste.filter((paiement)=>paiement.demande_reference===reference));setErreurPaiements("");}}).catch((cause)=>{if(actif)setErreurPaiements(cause instanceof Error?cause.message:"Les paiements du dossier n’ont pas pu être chargés.");}).finally(()=>{if(actif)setVersionPaiements(version);});return()=>{actif=false};},[reference,version]);
   useEffect(()=>{let actif=true;apiBackoffice.listerPartenaires().then((liste)=>{if(actif)setCompagnies(liste.filter((compagnie)=>compagnie.statut==="active"));}).catch((cause)=>{if(actif)toast.error(cause instanceof Error?cause.message:"Impossible de charger les compagnies.");});return()=>{actif=false};},[]);
   const catalogueSelectionne=catalogueAssiste.find((item)=>item.compagnie_id===formulaireAssiste.compagnieId)??null;
   const garantiesCategorie=catalogueSelectionne?.garanties_par_categorie[formulaireAssiste.usage]??catalogueSelectionne?.garanties??[];
@@ -854,6 +996,14 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
     }));
   };
   const ouvrirOffreAssistee=async()=>{
+    const categorie=typeof conducteur.categorie_professionnelle==="string"&&Object.hasOwn(professionsConducteur,conducteur.categorie_professionnelle)?conducteur.categorie_professionnelle as FormulaireOffreAssistee["categorieProfession"]:"";
+    setFormulaireAssiste((courant)=>({
+      ...courant,
+      categorieProfession:courant.categorieProfession||categorie,
+      professionAutre:courant.professionAutre||(typeof conducteur.profession==="string"?conducteur.profession:""),
+      dateNaissance:courant.dateNaissance||(typeof conducteur.date_naissance==="string"?conducteur.date_naissance:""),
+      permisDelivreLe:courant.permisDelivreLe||(typeof conducteur.permis_delivre_le==="string"?conducteur.permis_delivre_le:""),
+    }));
     setOffreAssisteeOuverte(true);
     if(catalogueAssiste.length)return;
     setChargementCatalogue(true);
@@ -902,6 +1052,49 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
     }catch(cause){toast.error(cause instanceof Error?cause.message:"Les offres n’ont pas pu être envoyées.");}finally{setTransmission(false);}
   };
   const offreChoisie=offres.find((offre)=>offre.selectionnee);
+  const offreChoisieId=offreChoisie?.id;
+  const cleEcheancier=`${reference}:${version}:${offreChoisieId??""}:${peutCreer}`;
+  const chargementEcheancier=operationEcheancier||Boolean(offreChoisieId&&peutCreer&&cleEcheancierChargee!==cleEcheancier);
+  const erreurEcheancier=cleEcheancierChargee===cleEcheancier?erreurEcheancierStockee:"";
+  const suiviAnnuel=cleEcheancierChargee===cleEcheancier&&echeancier?.offre_id===offreChoisieId?echeancier:null;
+  const paiementsConfirmes=paiementsDemande.filter((paiement)=>paiement.statut==="reussi"&&paiement.offre_id===offreChoisie?.id);
+  const paiementConfirme=paiementsConfirmes[0];
+  const chargementPaiements=versionPaiements!==version;
+  useEffect(()=>{
+    let actif=true;
+    if(!offreChoisieId||!peutCreer)return;
+    apiBackoffice.obtenirEcheancierPaiements(reference).then((suivi)=>{
+      if(actif){
+        if(suivi&&suivi.offre_id!==offreChoisieId){setEcheancier(null);setErreurEcheancier("L’offre choisie a changé. Actualisez le dossier.");return;}
+        setEcheancier(suivi);
+        setErreurEcheancier("");
+      }
+    }).catch((cause)=>{if(actif){setEcheancier(null);setErreurEcheancier(cause instanceof Error?cause.message:"Le suivi annuel n’a pas pu être chargé.");}}).finally(()=>{if(actif)setCleEcheancierChargee(cleEcheancier);});
+    return()=>{actif=false;};
+  },[reference,version,offreChoisieId,peutCreer,cleEcheancier]);
+  const rechargerEcheancier=async()=>{
+    setChargementEcheancier(true);
+    try{
+      const suivi=await apiBackoffice.obtenirEcheancierPaiements(reference);
+      if(suivi&&suivi.offre_id!==offreChoisie?.id)throw new Error("L’offre choisie a changé. Actualisez le dossier.");
+      setEcheancier(suivi);setErreurEcheancier("");setCleEcheancierChargee(cleEcheancier);
+    }catch(cause){setErreurEcheancier(cause instanceof Error?cause.message:"Le suivi annuel n’a pas pu être chargé.");}
+    finally{setChargementEcheancier(false);}
+  };
+  const rechargerPaiements=async()=>{
+    setVersionPaiements(null);
+    try{setPaiementsDemande((await apiBackoffice.listerPaiementsReels()).filter((paiement)=>paiement.demande_reference===reference));setErreurPaiements("");}
+    catch(cause){setErreurPaiements(cause instanceof Error?cause.message:"Les paiements du dossier n’ont pas pu être chargés.");}
+    finally{setVersionPaiements(version);}
+  };
+  const confirmerPaiement=(paiement:PaiementCampayBackoffice)=>{
+    setPaiementsDemande((courants)=>[paiement,...courants.filter((item)=>item.id!==paiement.id)]);
+    setVersionPaiements(version);
+    setErreurPaiements("");
+    setOffrePaiement(null);
+    void rechargerEcheancier();
+    void onActualiserDemande().catch(()=>toast.error("Le paiement est enregistré. Le dossier n’a pas pu être actualisé."));
+  };
   const preparerContrat=async()=>{
     if(!offreChoisie||preparationContrat)return;
     setPreparationContrat(true);
@@ -935,6 +1128,7 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
       await Promise.all([charger(),onActualiserDemande()]);
     }catch(cause){toast.error(cause instanceof Error?cause.message:"L’offre n’a pas pu être créée.");}finally{setEnregistrement(false);}
   };
+  const erreurProfilAssiste=erreurProfilOffreAssistee(formulaireAssiste);
   const valideAssiste=Boolean(
     catalogueSelectionne&&
     formulaireAssiste.usage&&
@@ -946,7 +1140,8 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
     Number(formulaireAssiste.nombrePlaces)>=1&&
     formulaireAssiste.zone&&
     formulaireAssiste.dureeMois&&
-    formulaireAssiste.dateEffet&&
+    dateIsoValide(formulaireAssiste.dateEffet)&&
+    !erreurProfilAssiste&&
     formulaireAssiste.garanties.length>=2
   );
   const creerAssistee=async()=>{
@@ -961,6 +1156,12 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
       possede_remorque:formulaireAssiste.possedeRemorque,
       duree_mois:Number(formulaireAssiste.dureeMois),
       date_effet:formulaireAssiste.dateEffet,
+      conducteur:{
+        categorie_professionnelle:formulaireAssiste.categorieProfession as OffreAssisteeCreation["conducteur"]["categorie_professionnelle"],
+        profession:formulaireAssiste.categorieProfession==="autre"?formulaireAssiste.professionAutre.trim():professionsConducteur[formulaireAssiste.categorieProfession],
+        date_naissance:formulaireAssiste.dateNaissance,
+        permis_delivre_le:formulaireAssiste.permisDelivreLe,
+      },
       garanties:formulaireAssiste.garanties,
       recommandee:formulaireAssiste.recommandee,
     };
@@ -984,7 +1185,20 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
   const nombreAssistees=offres.filter((offre)=>offre.origine==="assistee").length;
   const nombreManuelles=offres.length-nombreAutomatiques-nombreAssistees;
 
-  return <Card className="request-page-panel"><CardContent className="p-0"><div className="section-title-row"><div><p className="eyebrow">Offres calculées et manuelles</p><h2>Propositions au client</h2>{!chargement&&offres.length>0&&<p className="mt-1 text-sm text-muted-foreground">{nombreAutomatiques} automatique(s) · {nombreAssistees} assistée(s) · {nombreManuelles} manuelle(s)</p>}</div><div className="flex flex-wrap gap-2">{selectionEnvoi.length>0&&<Button size="sm" disabled={transmission} onClick={()=>void transmettre()}>{transmission?<LoaderCircle className="animate-spin"/>:<ChevronRight/>}Envoyer {selectionEnvoi.length} offre{selectionEnvoi.length>1?"s":""} au client</Button>}{peutCreer&&demandeAutomobileVoiture&&!demandeDelegueeAutomobile&&<Button size="sm" variant="outline" disabled={generation} onClick={()=>void generer()}>{generation?<LoaderCircle className="animate-spin"/>:<RefreshCcw/>}Générer avec Royal Onyx</Button>}{peutCreer&&demandeAutomobileVoiture&&<Button size="sm" onClick={()=>void ouvrirOffreAssistee()}><Sparkles/>Préparer avec un tarifaire</Button>}{peutCreer&&!demandeAutomobileVoiture&&<Button size="sm" variant="outline" onClick={()=>setOuvert(true)}><Plus/>Ajouter manuellement</Button>}</div></div>{offreChoisie&&<div className="m-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Choix actuel du client</p><strong className="mt-1 block text-base">{offreChoisie.reference}</strong><span className="text-sm text-emerald-900">{money.format(offreChoisie.prime_xaf)} · {offreChoisie.assureur}</span></div>{peutCreer&&statutDemande!=="police_disponible"&&statutDemande!=="finalisee"&&(statutDemande==="contrat_en_preparation"?<Badge variant="secondary">Contrat en préparation</Badge>:<Button size="sm" disabled={preparationContrat} onClick={()=>void preparerContrat()}>{preparationContrat&&<LoaderCircle className="animate-spin"/>}Préparer le contrat</Button>)}</div></div>}{chargement?<div className="dashboard-skeleton" aria-label="Chargement des offres"><div className="skeleton skeleton--panel"/></div>:offres.length?<div className="space-y-4 p-4">{offres.map((offre)=><CarteOffreDemande offre={offre} key={offre.id} peutTransmettre={peutCreer} selectionneePourEnvoi={selectionEnvoi.includes(offre.id)} onSelectionEnvoi={modifierSelectionEnvoi} onCompleter={ouvrirTarification}/>)}</div>:<div className="request-claim"><div><strong>Aucune offre disponible.</strong><span>{demandeAutomobileVoiture?"Générez une proposition automatique ou préparez une offre à partir du tarifaire de la compagnie.":"Ajoutez une proposition adaptée à la demande du client."}</span></div></div>}
+  return <Card className="request-page-panel"><CardContent className="p-0"><div className="section-title-row"><div><p className="eyebrow">Offres calculées et manuelles</p><h2>Propositions au client</h2>{!chargement&&offres.length>0&&<p className="mt-1 text-sm text-muted-foreground">{nombreAutomatiques} automatique(s) · {nombreAssistees} assistée(s) · {nombreManuelles} manuelle(s)</p>}</div><div className="flex flex-wrap gap-2">{selectionEnvoi.length>0&&<Button size="sm" disabled={transmission} onClick={()=>void transmettre()}>{transmission?<LoaderCircle className="animate-spin"/>:<ChevronRight/>}Envoyer {selectionEnvoi.length} offre{selectionEnvoi.length>1?"s":""} au client</Button>}{peutCreer&&demandeAutomobileVoiture&&!demandeDelegueeAutomobile&&<Button size="sm" variant="outline" disabled={generation} onClick={()=>void generer()}>{generation?<LoaderCircle className="animate-spin"/>:<RefreshCcw/>}Générer avec Royal Onyx</Button>}{peutCreer&&demandeAutomobileVoiture&&<Button size="sm" onClick={()=>void ouvrirOffreAssistee()}><Sparkles/>Préparer avec un tarifaire</Button>}{peutCreer&&!demandeAutomobileVoiture&&<Button size="sm" variant="outline" onClick={()=>setOuvert(true)}><Plus/>Ajouter manuellement</Button>}</div></div>{offreChoisie&&<div className="m-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Choix actuel du client</p><strong className="mt-1 block text-base">{offreChoisie.reference}</strong><span className="text-sm text-emerald-900">{money.format(offreChoisie.prime_xaf)} · {offreChoisie.assureur}</span></div>
+        <div className="flex flex-wrap items-center gap-2">
+          {(suiviAnnuel?.termine||(!suiviAnnuel&&paiementConfirme&&paiementConfirme.fraction_debut_mois==null))?<Badge className="bg-emerald-100 text-emerald-900"><Check className="mr-1 size-3"/>{suiviAnnuel?"Année réglée":"Paiement confirmé"}</Badge>:peutCreer&&<Button size="sm" disabled={chargementPaiements||chargementEcheancier||Boolean(erreurPaiements)||Boolean(erreurEcheancier)} onClick={()=>setOffrePaiement(offreChoisie)}>{chargementPaiements||chargementEcheancier?<LoaderCircle className="animate-spin"/>:<WalletCards/>}Enregistrer le paiement</Button>}
+          {peutCreer&&statutDemande!=="police_disponible"&&statutDemande!=="finalisee"&&(statutDemande==="contrat_en_preparation"?<Badge variant="secondary">Contrat en préparation</Badge>:<Button size="sm" variant="outline" disabled={preparationContrat} onClick={()=>void preparerContrat()}>{preparationContrat&&<LoaderCircle className="animate-spin"/>}Préparer le contrat</Button>)}
+        </div>
+      </div>
+      {suiviAnnuel&&<SuiviReglementAnnuel suivi={suiviAnnuel}/>}
+      {paiementsConfirmes.length>0&&<div className="mt-3 space-y-3 border-t border-emerald-200 pt-3 text-xs text-emerald-950">{paiementsConfirmes.map((paiement)=><div key={paiement.id} className="space-y-1"><p><strong>{paiement.reference}</strong> · {money.format(paiement.montant_xaf)} · {libellesModesPaiement[paiement.mode_paiement]??paiement.operateur??"Paiement"} · {displayDate(paiement.date_paiement??paiement.confirme_le??paiement.cree_le)}</p><PeriodeReglement paiement={paiement}/>{paiement.reference_transaction&&<p>Référence du règlement : {paiement.reference_transaction}</p>}{paiement.enregistre_par_nom&&<p>Enregistré par {paiement.enregistre_par_nom}</p>}</div>)}</div>}
+      {erreurEcheancier&&peutCreer&&<div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-destructive" role="alert"><span>{erreurEcheancier}</span><Button size="sm" variant="outline" disabled={chargementEcheancier} onClick={()=>void rechargerEcheancier()}>Réessayer le suivi annuel</Button></div>}
+      {erreurPaiements&&peutCreer&&<div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-destructive" role="alert"><span>{erreurPaiements}</span><Button size="sm" variant="outline" disabled={chargementPaiements} onClick={()=>void rechargerPaiements()}>Réessayer</Button></div>}
+    </div>}{chargement?<div className="dashboard-skeleton" aria-label="Chargement des offres"><div className="skeleton skeleton--panel"/></div>:offres.length?<div className="space-y-4 p-4">{offres.map((offre)=><CarteOffreDemande offre={offre} key={offre.id} peutTransmettre={peutCreer} selectionneePourEnvoi={selectionEnvoi.includes(offre.id)} onSelectionEnvoi={modifierSelectionEnvoi} onCompleter={ouvrirTarification}/>)}</div>:<div className="request-claim"><div><strong>Aucune offre disponible.</strong><span>{demandeAutomobileVoiture?"Générez une proposition automatique ou préparez une offre à partir du tarifaire de la compagnie.":"Ajoutez une proposition adaptée à la demande du client."}</span></div></div>}
+    {offrePaiement&&<DialoguePaiementManuel key={offrePaiement.id} demandeReference={reference} offre={offrePaiement} suivi={suiviAnnuel} onFermer={()=>setOffrePaiement(null)} onConfirme={confirmerPaiement}/>}
     <Dialog open={offreAssisteeOuverte} onOpenChange={setOffreAssisteeOuverte}>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
@@ -1001,6 +1215,17 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
           <label><Label>Remorque</Label><Select value={formulaireAssiste.possedeRemorque?"oui":"non"} onValueChange={(valeur)=>modifierAssiste("possedeRemorque",valeur==="oui")}><SelectTrigger className="w-full"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="non">Sans remorque</SelectItem><SelectItem value="oui">Avec remorque</SelectItem></SelectContent></Select></label>
           <label><Label>Durée</Label><Select value={formulaireAssiste.dureeMois} onValueChange={(valeur)=>modifierAssiste("dureeMois",valeur)}><SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner"/></SelectTrigger><SelectContent>{dureesCategorie.map((duree)=><SelectItem key={duree} value={String(duree)}>{duree} mois</SelectItem>)}</SelectContent></Select></label>
           <label><Label>Date d’effet</Label><Input type="date" value={formulaireAssiste.dateEffet} onChange={(event)=>modifierAssiste("dateEffet",event.target.value)}/></label>
+          <fieldset className="min-w-0 space-y-3 rounded-xl border bg-slate-50/60 p-4 sm:col-span-2">
+            <legend className="px-1 text-sm font-semibold">Conducteur habituel</legend>
+            <p id="offre-assistee-profil-aide" className="text-xs text-muted-foreground">Ces informations sont nécessaires pour appliquer les règles du tarifaire à la date d’effet. Vérifiez les données reprises du dossier.</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid min-w-0 gap-2 sm:col-span-2"><Label htmlFor="offre-assistee-profession">Profession *</Label><Select value={formulaireAssiste.categorieProfession} onValueChange={(valeur)=>modifierAssiste("categorieProfession",valeur as FormulaireOffreAssistee["categorieProfession"])}><SelectTrigger id="offre-assistee-profession" className="h-auto min-h-9 w-full min-w-0 whitespace-normal text-left *:data-[slot=select-value]:block" aria-required="true" aria-describedby="offre-assistee-profil-aide"><SelectValue placeholder="Choisir la profession"/></SelectTrigger><SelectContent position="popper" className="max-w-[calc(100vw-3rem)]">{Object.entries(professionsConducteur).map(([code,libelle])=><SelectItem className="whitespace-normal break-words" key={code} value={code}>{libelle}</SelectItem>)}</SelectContent></Select></div>
+              {formulaireAssiste.categorieProfession==="autre"&&<div className="grid gap-2 sm:col-span-2"><Label htmlFor="offre-assistee-profession-autre">Métier réel *</Label><Input id="offre-assistee-profession-autre" maxLength={120} required value={formulaireAssiste.professionAutre} onChange={(event)=>modifierAssiste("professionAutre",event.target.value)} placeholder="Préciser le métier du conducteur"/></div>}
+              <div className="grid gap-2"><Label htmlFor="offre-assistee-naissance">Date de naissance *</Label><Input id="offre-assistee-naissance" type="date" max={dateLocaleCourante()} required value={formulaireAssiste.dateNaissance} onChange={(event)=>modifierAssiste("dateNaissance",event.target.value)}/></div>
+              <div className="grid gap-2"><Label htmlFor="offre-assistee-permis">Date d’obtention initiale du permis *</Label><Input id="offre-assistee-permis" type="date" max={formulaireAssiste.dateEffet&&formulaireAssiste.dateEffet<dateLocaleCourante()?formulaireAssiste.dateEffet:dateLocaleCourante()} required value={formulaireAssiste.permisDelivreLe} onChange={(event)=>modifierAssiste("permisDelivreLe",event.target.value)}/></div>
+            </div>
+            {erreurProfilAssiste&&<p className="text-xs text-amber-800" role="status">{erreurProfilAssiste}</p>}
+          </fieldset>
           <fieldset className="space-y-2 sm:col-span-2"><Label>Garanties</Label><div className="grid gap-2 sm:grid-cols-2">{garantiesCategorie.map((garantie)=><label className="flex cursor-pointer items-center gap-3 rounded-lg border bg-white p-3 text-sm" key={garantie.code}><input type="checkbox" checked={formulaireAssiste.garanties.includes(garantie.code)} disabled={garantie.obligatoire} onChange={()=>basculerGarantieAssistee(garantie.code,garantie.obligatoire)}/><span><strong className="block">{garantie.libelle}</strong>{garantie.obligatoire&&<small className="text-muted-foreground">Obligatoire</small>}</span></label>)}</div></fieldset>
           <label className="flex items-center gap-3 rounded-lg border p-3 sm:col-span-2"><input type="checkbox" checked={formulaireAssiste.recommandee} onChange={(event)=>modifierAssiste("recommandee",event.target.checked)}/><span>Recommander cette offre au client</span></label>
           <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm text-blue-950 sm:col-span-2"><strong>Montants verrouillés :</strong> garanties, prime nette, accessoires, fichier ASAC, taxe, carte CEMAC et total TTC seront lus dans le tarifaire sélectionné. Aucun de ces montants n’est modifiable ici.</div>
@@ -1054,7 +1279,7 @@ function RequestDetailView({ reference, version, utilisateur, onBack }: { refere
       {!peutTraiter&&<div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"><LockKeyhole className="shrink-0"/><span>{detail.responsable?`Seul ${detail.responsable.nom_complet}, responsable de ce dossier, peut le traiter.`:"Vous devez prendre cette demande en charge avant de valider ses documents, préparer des offres ou répondre au client."}</span></div>}
       <div className="request-page-grid"><main className="request-page-main"><FicheDemandeClient demande={detail} peutDeciderDocuments={peutTraiter} onActualiser={async()=>appliquer(await apiBackoffice.obtenirDemande(reference))}/><DiscussionDemandePanel reference={reference} peutRepondre={peutTraiter}/></main><aside className="request-page-aside">
         <Card className="request-page-panel"><CardContent className="p-0"><p className="eyebrow">Prise en charge</p>{detail.responsable?<><div className="request-owner"><div><span>Responsable actuel</span><strong>{estResponsable?"Vous":detail.responsable.nom_complet}</strong><small>{detail.prise_en_charge_le&&`Depuis le ${new Date(detail.prise_en_charge_le).toLocaleString("fr-FR",{dateStyle:"medium",timeStyle:"short"})}`}</small></div>{estGestionnaire&&<Button variant="outline" disabled={Boolean(actionEnCours)} onClick={()=>void liberer()}>{actionEnCours==="liberation"&&<LoaderCircle className="animate-spin"/>}Libérer</Button>}</div>{estResponsable&&!estGestionnaire&&<p className="request-lock-note"><LockKeyhole/>Cette prise en charge est définitive. Seul un administrateur peut libérer ou réaffecter la demande.</p>}</>:<div className="request-claim"><div><strong>Cette demande est dans la file commune.</strong><span>Le premier utilisateur qui la prend devient définitivement son responsable.</span></div><Button disabled={Boolean(actionEnCours)} onClick={()=>void prendreEnCharge()}>{actionEnCours==="prise"&&<LoaderCircle className="animate-spin"/>}Prendre en charge</Button></div>}{detail.responsable&&estGestionnaire&&<div className="request-reassign"><Label>Réaffectation exceptionnelle</Label><Select value={responsableCible} onValueChange={setResponsableCible}><SelectTrigger className="w-full"><SelectValue placeholder="Choisir un responsable"/></SelectTrigger><SelectContent>{intervenants.map((intervenant)=><SelectItem key={intervenant.id} value={intervenant.id}>{intervenant.nom_complet} · {libellesRoles[intervenant.role]}</SelectItem>)}</SelectContent></Select><Textarea value={motifReaffectation} onChange={(event)=>setMotifReaffectation(event.target.value)} placeholder="Motif obligatoire de la réaffectation"/><Button disabled={!responsableCible||responsableCible===detail.responsable.id||motifReaffectation.trim().length<3||Boolean(actionEnCours)} onClick={()=>void reaffecter()}>{actionEnCours==="reaffectation"&&<LoaderCircle className="animate-spin"/>}Réaffecter</Button></div>}</CardContent></Card>
-        <OffresDemandePanel reference={reference} statutDemande={detail.statut} modePreparation={detail.mode_preparation} produit={detail.produit} sousType={detail.sous_type} version={version} peutCreer={peutTraiter} onActualiserDemande={async()=>appliquer(await apiBackoffice.obtenirDemande(reference))}/>
+        <OffresDemandePanel key={reference} reference={reference} statutDemande={detail.statut} modePreparation={detail.mode_preparation} produit={detail.produit} sousType={detail.sous_type} conducteur={objetDemande(detail.donnees.conducteur)} version={version} peutCreer={peutTraiter} onActualiserDemande={async()=>appliquer(await apiBackoffice.obtenirDemande(reference))}/>
         <Card className="request-page-panel"><CardContent className="p-0"><p className="eyebrow">Avancement automatique</p><ParcoursDemande statut={detail.statut}/></CardContent></Card>
       </aside></div>
     </>}
@@ -1126,7 +1351,18 @@ function PaiementsReelsView() {
   const charger=async()=>{try{setPaiements(await apiBackoffice.listerPaiementsReels());}catch(cause){toast.error(cause instanceof Error?cause.message:"Impossible de charger les paiements.");}finally{setChargement(false);}};
   useEffect(()=>{let actif=true;const actualiser=()=>apiBackoffice.listerPaiementsReels().then((liste)=>{if(actif){setPaiements(liste);setChargement(false);}}).catch(()=>{if(actif)setChargement(false);});void actualiser();const intervalle=window.setInterval(actualiser,10000);return()=>{actif=false;window.clearInterval(intervalle);};},[]);
   const rapprocher=async()=>{if(!selection||!referenceCampay.trim())return;setOperation(true);try{await apiBackoffice.rapprocherPaiement(selection.id,referenceCampay.trim());toast.success("Le statut CamPay a été vérifié côté serveur.");setSelection(null);setReferenceCampay("");await charger();}catch(cause){toast.error(cause instanceof Error?cause.message:"Le rapprochement a échoué.");}finally{setOperation(false);}};
-  return <><PageHeading eyebrow="Finance réelle" title="Paiements CamPay" subtitle="Seules les transactions initiées par les clients sont affichées. Un contrat naît uniquement après confirmation CamPay."/>{chargement?<div className="dashboard-skeleton"><div className="skeleton skeleton--panel"/></div>:<TableCard><Table><TableHeader><TableRow><TableHead>Référence</TableHead><TableHead>Demande</TableHead><TableHead>Montant</TableHead><TableHead>Téléphone</TableHead><TableHead>Opérateur</TableHead><TableHead>Créé le</TableHead><TableHead>Statut</TableHead><TableHead>Action</TableHead></TableRow></TableHeader><TableBody>{paiements.map((paiement)=><TableRow key={paiement.id}><TableCell className="ref-cell">{paiement.reference}<small>{paiement.reference_externe}</small></TableCell><TableCell>{paiement.demande_reference}</TableCell><TableCell><strong>{money.format(paiement.montant_xaf)}</strong></TableCell><TableCell>{paiement.numero_telephone}</TableCell><TableCell>{paiement.operateur||"—"}</TableCell><TableCell>{displayDate(paiement.cree_le)}</TableCell><TableCell><StatusBadge value={libellesPaiementCampay[paiement.statut]}/></TableCell><TableCell>{paiement.statut==="a_verifier"?<Button size="sm" variant="outline" onClick={()=>setSelection(paiement)}>Rapprocher</Button>:paiement.contrat_reference||"—"}</TableCell></TableRow>)}</TableBody></Table>{paiements.length===0&&<div className="request-empty-state"><WalletCards/><strong>Aucun paiement réel</strong><span>Les paiements apparaîtront après la sélection d’une offre par un client.</span></div>}</TableCard>}<Dialog open={Boolean(selection)} onOpenChange={(ouvert)=>{if(!ouvert){setSelection(null);setReferenceCampay("");}}}><DialogContent><DialogHeader><DialogTitle>Rapprocher un paiement incertain</DialogTitle><DialogDescription>Copiez la référence visible dans le tableau de bord CamPay. Le serveur interrogera CamPay et refusera toute incohérence de montant ou de référence.</DialogDescription></DialogHeader><Label>Référence CamPay</Label><Input value={referenceCampay} onChange={(event)=>setReferenceCampay(event.target.value)} placeholder="Référence de transaction CamPay"/><DialogFooter><Button variant="outline" onClick={()=>setSelection(null)}>Annuler</Button><Button disabled={referenceCampay.trim().length<5||operation} onClick={()=>void rapprocher()}>{operation&&<LoaderCircle className="animate-spin"/>}Vérifier auprès de CamPay</Button></DialogFooter></DialogContent></Dialog></>;
+  return <>
+    <PageHeading eyebrow="Finance réelle" title="Paiements" subtitle="Retrouvez les règlements enregistrés par les gestionnaires et les transactions en ligne."/>
+    {chargement?<div className="dashboard-skeleton"><div className="skeleton skeleton--panel"/></div>:<TableCard><Table><TableHeader><TableRow><TableHead>Référence</TableHead><TableHead>Demande</TableHead><TableHead>Montant</TableHead><TableHead>Moyen</TableHead><TableHead>Date du règlement</TableHead><TableHead>Enregistré par</TableHead><TableHead>Statut</TableHead><TableHead>Action</TableHead></TableRow></TableHeader><TableBody>{paiements.map((paiement)=><TableRow key={paiement.id}>
+      <TableCell className="ref-cell">{paiement.reference}<small>{paiement.reference_transaction||paiement.reference_externe}</small></TableCell>
+      <TableCell>{paiement.demande_reference}</TableCell>
+      <TableCell><strong>{money.format(paiement.montant_xaf)}</strong><PeriodeReglement paiement={paiement}/></TableCell>
+      <TableCell>{libellesModesPaiement[paiement.mode_paiement]??paiement.operateur??"Mobile Money"}<small className="block text-xs text-muted-foreground">{paiement.source==="manuel"?"Enregistrement manuel":"Confirmation automatique"}</small></TableCell>
+      <TableCell>{displayDate(paiement.date_paiement??paiement.cree_le)}</TableCell><TableCell>{paiement.enregistre_par_nom||"—"}</TableCell><TableCell><StatusBadge value={libellesPaiementCampay[paiement.statut]}/></TableCell>
+      <TableCell>{(paiement.source??"campay")==="campay"&&paiement.statut==="a_verifier"?<Button size="sm" variant="outline" onClick={()=>setSelection(paiement)}>Rapprocher</Button>:paiement.contrat_reference||"—"}</TableCell>
+    </TableRow>)}</TableBody></Table>{paiements.length===0&&<div className="request-empty-state"><WalletCards/><strong>Aucun paiement réel</strong><span>Les règlements apparaîtront dès leur enregistrement dans un dossier.</span></div>}</TableCard>}
+    <Dialog open={Boolean(selection)} onOpenChange={(ouvert)=>{if(!ouvert){setSelection(null);setReferenceCampay("");}}}><DialogContent><DialogHeader><DialogTitle>Rapprocher un paiement incertain</DialogTitle><DialogDescription>Copiez la référence visible dans le tableau de bord CamPay. Le serveur interrogera CamPay et refusera toute incohérence de montant ou de référence.</DialogDescription></DialogHeader><Label>Référence CamPay</Label><Input value={referenceCampay} onChange={(event)=>setReferenceCampay(event.target.value)} placeholder="Référence de transaction CamPay"/><DialogFooter><Button variant="outline" onClick={()=>setSelection(null)}>Annuler</Button><Button disabled={referenceCampay.trim().length<5||operation} onClick={()=>void rapprocher()}>{operation&&<LoaderCircle className="animate-spin"/>}Vérifier auprès de CamPay</Button></DialogFooter></DialogContent></Dialog>
+  </>;
 }
 
 function ContratsReelsView({ utilisateur }: { utilisateur: UtilisateurBackoffice }) {

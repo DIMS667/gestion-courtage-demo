@@ -77,13 +77,24 @@ export type MessageConversationBackoffice = {
   cree_le: string;
 };
 
+export type CorrectionResponsabiliteCivile = {
+  version_regles: string;
+  base: "rc";
+  date_reference: string;
+  prime_initiale_xaf: number;
+  taux_pourcent: -10 | 0 | 10;
+  montant_xaf: number;
+  prime_corrigee_xaf: number;
+  motifs: string[];
+};
+
 export type OffreAssuranceBackoffice = {
   id: string;
   compagnie_id: string | null;
   origine: "manuelle" | "automatique" | "assistee";
   bareme_id: string | null;
   formule_tarifaire_code: string | null;
-  detail_calcul: Record<string, unknown>;
+  detail_calcul: Record<string, unknown> & { correction_rc?: CorrectionResponsabiliteCivile };
   reference: string;
   demande_reference: string;
   produit: string;
@@ -105,6 +116,12 @@ export type OffreAssuranceBackoffice = {
   cree_le: string;
 };
 
+export type CapitauxPersonnes = {
+  deces_xaf: number;
+  invalidite_xaf: number;
+  frais_traitement_xaf: number;
+};
+
 export type LigneTarificationOffre = {
   code?: string | null;
   libelle: string;
@@ -112,6 +129,7 @@ export type LigneTarificationOffre = {
   annuite_xaf?: number | null;
   capital_montant?: string | null;
   franchise?: string | null;
+  capitaux_personnes?: CapitauxPersonnes;
 };
 
 export type TarificationOffre = {
@@ -150,6 +168,23 @@ export type OffreAssisteeCreation = {
   possede_remorque: boolean;
   duree_mois: number;
   date_effet: string;
+  conducteur: {
+    categorie_professionnelle:
+      | "delegue_medical"
+      | "delegue_inspecteur_commercial"
+      | "publicite"
+      | "agent_attache_delegue_commercial"
+      | "inspecteur_voyageur_commerce"
+      | "representant_inspecteur_ventes"
+      | "photographe_reporter"
+      | "gardiennage_securite"
+      | "boulangerie"
+      | "clerge"
+      | "autre";
+    profession: string;
+    date_naissance: string;
+    permis_delivre_le: string;
+  };
   garanties: string[];
   recommandee: boolean;
 };
@@ -169,6 +204,17 @@ export type CompagniePartenaireResume = {
 
 export type DetailCompagniePartenaire = CompagniePartenaireResume & {
   logo_modifie_le: string | null;
+  regles_profil_automobile: Array<{
+    bareme_code: string;
+    version_regles: string;
+    assiette: "rc";
+    age_seuil_ans: number;
+    permis_seuil_ans: number;
+    majoration_pourcent: number;
+    reduction_clerge_pourcent: number;
+    majorations_cumulables: boolean;
+    professions_majorees: Array<{ code: string; libelle: string }>;
+  }>;
   baremes: Array<{
     id: string;
     code: string;
@@ -327,6 +373,20 @@ export type PaiementCampayBackoffice = {
   reference_externe: string;
   demande_reference: string;
   offre_id: string;
+  source: string;
+  mode_paiement: string;
+  reference_transaction: string | null;
+  date_paiement: string | null;
+  confirme_le: string | null;
+  enregistre_par_id: string | null;
+  enregistre_par_nom: string | null;
+  fraction_debut_mois?: number | null;
+  fraction_duree_mois?: number | null;
+  detail_fraction?: {
+    date_debut?: string;
+    date_fin?: string;
+    [cle: string]: unknown;
+  } | null;
   montant_xaf: number;
   numero_telephone: string;
   statut: "initialisation" | "en_attente" | "reussi" | "echoue" | "a_verifier";
@@ -335,6 +395,40 @@ export type PaiementCampayBackoffice = {
   contrat_reference: string | null;
   cree_le: string;
   modifie_le: string;
+};
+
+export type PaiementManuelCreation = {
+  demande_reference: string;
+  offre_id: string;
+  mode_paiement: "especes" | "virement" | "mtn_momo" | "orange_money";
+  reference_transaction: string;
+  date_paiement: string;
+  fraction_debut_mois?: number;
+  fraction_duree_mois?: number;
+};
+
+export type SuiviFractionnement = {
+  offre_id: string;
+  offre_reference: string;
+  demande_reference: string | null;
+  annee_debut: string;
+  annee_fin: string;
+  prime_annuelle_xaf: number;
+  plafond_xaf: number;
+  total_encaisse_xaf: number;
+  solde_plafond_xaf: number;
+  mois_regles: number;
+  termine: boolean;
+  surcout_fractionnement_xaf: number;
+  fractions: Array<{
+    duree_mois: number;
+    mois_debut: number;
+    debut: string;
+    fin: string;
+    montant_tarif_xaf: number;
+    montant_xaf: number;
+    ajustement_plafond_xaf: number;
+  }>;
 };
 
 export type ContratAssuranceBackoffice = {
@@ -872,6 +966,19 @@ export const apiBackoffice = {
 
   listerPaiementsReels() {
     return appeler<PaiementCampayBackoffice[]>("/backoffice/souscriptions/paiements");
+  },
+
+  obtenirEcheancierPaiements(reference: string) {
+    return appeler<SuiviFractionnement | null>(
+      `/backoffice/souscriptions/paiements/echeancier?demande_reference=${encodeURIComponent(reference)}`,
+    );
+  },
+
+  enregistrerPaiementManuel(entree: PaiementManuelCreation) {
+    return appeler<PaiementCampayBackoffice>(
+      "/backoffice/souscriptions/paiements/manuels",
+      { method: "POST", body: JSON.stringify(entree) },
+    );
   },
 
   rapprocherPaiement(paiementId: string, referenceCampay: string) {
