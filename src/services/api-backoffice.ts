@@ -619,8 +619,9 @@ export type ReponseAuthentification =
     };
 
 const URL_API = (
-  import.meta.env.VITE_API_BASE_URL ?? "https://api.followupassurance.com/api/v1"
-).replace(/\/$/, "");
+  import.meta.env.VITE_API_BASE_URL
+  || (import.meta.env.DEV ? "http://127.0.0.1:8000/api/v1" : "https://api.followupassurance.com/api/v1")
+).replace(/\/+$/, "");
 const CLE_CSRF = "followup_backoffice_csrf";
 const CLE_UTILISATEUR_ATTENDU = "followup_backoffice_utilisateur_attendu";
 const CLE_SIGNAL_SESSION_ATTENDU = "followup_backoffice_signal_session_attendu";
