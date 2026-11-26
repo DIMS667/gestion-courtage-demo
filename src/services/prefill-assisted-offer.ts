@@ -1,3 +1,4 @@
+import { metierDuProfil } from "./metiers";
 import type { OffreAssisteeCreation } from "./api-backoffice";
 
 export type FormulaireOffreAssistee = {
@@ -25,6 +26,7 @@ export function preremplirOffreAssistee(donnees: Record<string, unknown>, conduc
   const conducteur = { ...conducteurHistorique, ...objet(donnees.conducteur) };
   const zone = texte(vehicule.zone_circulation_principale).toUpperCase().replace("ZONE", "").trim();
   const usage = texte(vehicule.usage);
+  const metier = metierDuProfil(texte(conducteur.profession), texte(conducteur.categorie_professionnelle));
   const aliases: Record<string, string> = { cat1_professionnel: "cat1_tourisme", cat4b_transport_urbain: "cat4a_taxi_ville" };
   return {
     ...formulaireOffreAssisteeVide(),
@@ -36,8 +38,8 @@ export function preremplirOffreAssistee(donnees: Record<string, unknown>, conduc
     possedeRemorque: vehicule.possede_remorque === true,
     dureeMois: nombre(couverture.duree_mois),
     dateEffet: couverture.date_effet_inconnue === true ? "" : texte(couverture.date_effet_souhaitee),
-    categorieProfession: texte(conducteur.categorie_professionnelle) as FormulaireOffreAssistee["categorieProfession"],
-    professionAutre: texte(conducteur.profession),
+    categorieProfession: metier?.categorie ?? texte(conducteur.categorie_professionnelle) as FormulaireOffreAssistee["categorieProfession"],
+    professionAutre: metier?.libelle ?? texte(conducteur.profession),
     dateNaissance: texte(conducteur.date_naissance),
     permisDelivreLe: texte(conducteur.permis_delivre_le),
     garanties: Array.isArray(couverture.garanties) ? [...new Set(couverture.garanties.filter((value): value is string => typeof value === "string"))] : [],

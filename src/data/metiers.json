@@ -1,0 +1,912 @@
+[
+  {
+    "code": "acteur",
+    "libelle": "Acteur",
+    "categorie": "autre"
+  },
+  {
+    "code": "administrateur_civil",
+    "libelle": "Administrateur civil",
+    "categorie": "autre"
+  },
+  {
+    "code": "administrateur_systeme",
+    "libelle": "Administrateur système",
+    "categorie": "autre"
+  },
+  {
+    "code": "agent_d_assurance",
+    "libelle": "Agent d'assurance",
+    "categorie": "autre"
+  },
+  {
+    "code": "agent_d_entretien",
+    "libelle": "Agent d'entretien",
+    "categorie": "autre"
+  },
+  {
+    "code": "agent_de_securite",
+    "libelle": "Agent de sécurité",
+    "categorie": "autre"
+  },
+  {
+    "code": "agent_immobilier",
+    "libelle": "Agent immobilier",
+    "categorie": "autre"
+  },
+  {
+    "code": "agent_penitentiaire",
+    "libelle": "Agent pénitentiaire",
+    "categorie": "autre"
+  },
+  {
+    "code": "agent_attache_delegue_commercial",
+    "libelle": "Agent, attaché ou délégué commercial",
+    "categorie": "agent_attache_delegue_commercial"
+  },
+  {
+    "code": "agriculteur",
+    "libelle": "Agriculteur",
+    "categorie": "autre"
+  },
+  {
+    "code": "aide_soignant",
+    "libelle": "Aide-soignant",
+    "categorie": "autre"
+  },
+  {
+    "code": "analyste_financier",
+    "libelle": "Analyste financier",
+    "categorie": "autre"
+  },
+  {
+    "code": "animateur_radio_et_television",
+    "libelle": "Animateur radio et télévision",
+    "categorie": "autre"
+  },
+  {
+    "code": "apiculteur",
+    "libelle": "Apiculteur",
+    "categorie": "autre"
+  },
+  {
+    "code": "arbitre",
+    "libelle": "Arbitre",
+    "categorie": "autre"
+  },
+  {
+    "code": "architecte",
+    "libelle": "Architecte",
+    "categorie": "autre"
+  },
+  {
+    "code": "assistant_social",
+    "libelle": "Assistant social",
+    "categorie": "autre"
+  },
+  {
+    "code": "auditeur",
+    "libelle": "Auditeur",
+    "categorie": "autre"
+  },
+  {
+    "code": "aviculteur",
+    "libelle": "Aviculteur",
+    "categorie": "autre"
+  },
+  {
+    "code": "avocat",
+    "libelle": "Avocat",
+    "categorie": "autre"
+  },
+  {
+    "code": "banquier",
+    "libelle": "Banquier",
+    "categorie": "autre"
+  },
+  {
+    "code": "barbier",
+    "libelle": "Barbier",
+    "categorie": "autre"
+  },
+  {
+    "code": "barman",
+    "libelle": "Barman",
+    "categorie": "autre"
+  },
+  {
+    "code": "bayam_sellam",
+    "libelle": "Bayam-sellam",
+    "categorie": "autre"
+  },
+  {
+    "code": "bibliothecaire",
+    "libelle": "Bibliothécaire",
+    "categorie": "autre"
+  },
+  {
+    "code": "bijoutier",
+    "libelle": "Bijoutier",
+    "categorie": "autre"
+  },
+  {
+    "code": "blanchisseur",
+    "libelle": "Blanchisseur",
+    "categorie": "autre"
+  },
+  {
+    "code": "boulanger",
+    "libelle": "Boulanger",
+    "categorie": "boulangerie"
+  },
+  {
+    "code": "boulangerie",
+    "libelle": "Boulangerie",
+    "categorie": "boulangerie"
+  },
+  {
+    "code": "boutiquier",
+    "libelle": "Boutiquier",
+    "categorie": "autre"
+  },
+  {
+    "code": "braiseur",
+    "libelle": "Braiseur",
+    "categorie": "autre"
+  },
+  {
+    "code": "brodeur",
+    "libelle": "Brodeur",
+    "categorie": "autre"
+  },
+  {
+    "code": "bucheron",
+    "libelle": "Bucheron",
+    "categorie": "autre"
+  },
+  {
+    "code": "cadreur",
+    "libelle": "Cadreur",
+    "categorie": "autre"
+  },
+  {
+    "code": "caissier",
+    "libelle": "Caissier",
+    "categorie": "autre"
+  },
+  {
+    "code": "carreleur",
+    "libelle": "Carreleur",
+    "categorie": "autre"
+  },
+  {
+    "code": "chanteur",
+    "libelle": "Chanteur",
+    "categorie": "autre"
+  },
+  {
+    "code": "charpentier",
+    "libelle": "Charpentier",
+    "categorie": "autre"
+  },
+  {
+    "code": "chaudronnier",
+    "libelle": "Chaudronnier",
+    "categorie": "autre"
+  },
+  {
+    "code": "chauffeur_de_taxi",
+    "libelle": "Chauffeur de taxi",
+    "categorie": "autre"
+  },
+  {
+    "code": "chauffeur_poids_lourd",
+    "libelle": "Chauffeur poids lourd",
+    "categorie": "autre"
+  },
+  {
+    "code": "chef_cuisinier",
+    "libelle": "Chef cuisinier",
+    "categorie": "autre"
+  },
+  {
+    "code": "chercheur",
+    "libelle": "Chercheur",
+    "categorie": "autre"
+  },
+  {
+    "code": "chirurgien",
+    "libelle": "Chirurgien",
+    "categorie": "autre"
+  },
+  {
+    "code": "coiffeur",
+    "libelle": "Coiffeur",
+    "categorie": "autre"
+  },
+  {
+    "code": "comedien",
+    "libelle": "Comédien",
+    "categorie": "autre"
+  },
+  {
+    "code": "commercant",
+    "libelle": "Commerçant",
+    "categorie": "autre"
+  },
+  {
+    "code": "commercial",
+    "libelle": "Commercial",
+    "categorie": "agent_attache_delegue_commercial"
+  },
+  {
+    "code": "community_manager",
+    "libelle": "Community manager",
+    "categorie": "autre"
+  },
+  {
+    "code": "comptable",
+    "libelle": "Comptable",
+    "categorie": "autre"
+  },
+  {
+    "code": "conducteur_de_bus",
+    "libelle": "Conducteur de bus",
+    "categorie": "autre"
+  },
+  {
+    "code": "conducteur_de_moto_taxi",
+    "libelle": "Conducteur de moto-taxi",
+    "categorie": "autre"
+  },
+  {
+    "code": "conducteur_de_travaux",
+    "libelle": "Conducteur de travaux",
+    "categorie": "autre"
+  },
+  {
+    "code": "conseiller_d_orientation",
+    "libelle": "Conseiller d'orientation",
+    "categorie": "autre"
+  },
+  {
+    "code": "cordonnier",
+    "libelle": "Cordonnier",
+    "categorie": "autre"
+  },
+  {
+    "code": "couturier",
+    "libelle": "Couturier",
+    "categorie": "autre"
+  },
+  {
+    "code": "cuisinier",
+    "libelle": "Cuisinier",
+    "categorie": "autre"
+  },
+  {
+    "code": "data_analyst",
+    "libelle": "Data analyst",
+    "categorie": "autre"
+  },
+  {
+    "code": "declarant_en_douane",
+    "libelle": "Déclarant en douane",
+    "categorie": "autre"
+  },
+  {
+    "code": "delegue_medical",
+    "libelle": "Délégué médical",
+    "categorie": "delegue_medical"
+  },
+  {
+    "code": "delegue_inspecteur_commercial",
+    "libelle": "Délégué ou inspecteur commercial",
+    "categorie": "delegue_inspecteur_commercial"
+  },
+  {
+    "code": "dentiste",
+    "libelle": "Dentiste",
+    "categorie": "autre"
+  },
+  {
+    "code": "developpeur_web_et_mobile",
+    "libelle": "Développeur web et mobile",
+    "categorie": "autre"
+  },
+  {
+    "code": "diplomate",
+    "libelle": "Diplomate",
+    "categorie": "autre"
+  },
+  {
+    "code": "dj",
+    "libelle": "DJ",
+    "categorie": "autre"
+  },
+  {
+    "code": "docker",
+    "libelle": "Docker",
+    "categorie": "autre"
+  },
+  {
+    "code": "douanier",
+    "libelle": "Douanier",
+    "categorie": "autre"
+  },
+  {
+    "code": "ebeniste",
+    "libelle": "Ébéniste",
+    "categorie": "autre"
+  },
+  {
+    "code": "ecrivain",
+    "libelle": "Écrivain",
+    "categorie": "autre"
+  },
+  {
+    "code": "educateur_de_la_petite_enfance",
+    "libelle": "Éducateur de la petite enfance",
+    "categorie": "autre"
+  },
+  {
+    "code": "electricien",
+    "libelle": "Électricien",
+    "categorie": "autre"
+  },
+  {
+    "code": "electromecanicien",
+    "libelle": "Électromécanicien",
+    "categorie": "autre"
+  },
+  {
+    "code": "eleveur",
+    "libelle": "Éleveur",
+    "categorie": "autre"
+  },
+  {
+    "code": "enseignant_chercheur",
+    "libelle": "Enseignant-chercheur",
+    "categorie": "autre"
+  },
+  {
+    "code": "entraineur_sportif",
+    "libelle": "Entraîneur sportif",
+    "categorie": "autre"
+  },
+  {
+    "code": "estheticienne",
+    "libelle": "Esthéticienne",
+    "categorie": "autre"
+  },
+  {
+    "code": "expert_en_cybersecurite",
+    "libelle": "Expert en cybersécurité",
+    "categorie": "autre"
+  },
+  {
+    "code": "expert_comptable",
+    "libelle": "Expert-comptable",
+    "categorie": "autre"
+  },
+  {
+    "code": "exploitant_forestier",
+    "libelle": "Exploitant forestier",
+    "categorie": "autre"
+  },
+  {
+    "code": "ferronnier",
+    "libelle": "Ferronnier",
+    "categorie": "autre"
+  },
+  {
+    "code": "footballeur",
+    "libelle": "Footballeur",
+    "categorie": "autre"
+  },
+  {
+    "code": "formateur_professionnel",
+    "libelle": "Formateur professionnel",
+    "categorie": "autre"
+  },
+  {
+    "code": "frigoriste",
+    "libelle": "Frigoriste",
+    "categorie": "autre"
+  },
+  {
+    "code": "gardien",
+    "libelle": "Gardien",
+    "categorie": "autre"
+  },
+  {
+    "code": "gendarme",
+    "libelle": "Gendarme",
+    "categorie": "autre"
+  },
+  {
+    "code": "geologue",
+    "libelle": "Géologue",
+    "categorie": "autre"
+  },
+  {
+    "code": "geometre_topographe",
+    "libelle": "Géomètre-topographe",
+    "categorie": "autre"
+  },
+  {
+    "code": "gerant_d_hotel",
+    "libelle": "Gérant d'hôtel",
+    "categorie": "autre"
+  },
+  {
+    "code": "gerant_de_call_box",
+    "libelle": "Gérant de call-box",
+    "categorie": "autre"
+  },
+  {
+    "code": "gestionnaire_des_ressources_humaines",
+    "libelle": "Gestionnaire des ressources humaines",
+    "categorie": "autre"
+  },
+  {
+    "code": "greffier",
+    "libelle": "Greffier",
+    "categorie": "autre"
+  },
+  {
+    "code": "guide_touristique",
+    "libelle": "Guide touristique",
+    "categorie": "autre"
+  },
+  {
+    "code": "gynecologue",
+    "libelle": "Gynécologue",
+    "categorie": "autre"
+  },
+  {
+    "code": "hotesse_de_l_air",
+    "libelle": "Hôtesse de l'air",
+    "categorie": "autre"
+  },
+  {
+    "code": "huissier_de_justice",
+    "libelle": "Huissier de justice",
+    "categorie": "autre"
+  },
+  {
+    "code": "importateur_exportateur",
+    "libelle": "Importateur-exportateur",
+    "categorie": "autre"
+  },
+  {
+    "code": "infirmier",
+    "libelle": "Infirmier",
+    "categorie": "autre"
+  },
+  {
+    "code": "infographiste",
+    "libelle": "Infographiste",
+    "categorie": "autre"
+  },
+  {
+    "code": "ingenieur_agronome",
+    "libelle": "Ingénieur agronome",
+    "categorie": "autre"
+  },
+  {
+    "code": "ingenieur_des_mines",
+    "libelle": "Ingénieur des mines",
+    "categorie": "autre"
+  },
+  {
+    "code": "ingenieur_du_son",
+    "libelle": "Ingénieur du son",
+    "categorie": "autre"
+  },
+  {
+    "code": "ingenieur_genie_civil",
+    "libelle": "Ingénieur génie civil",
+    "categorie": "autre"
+  },
+  {
+    "code": "ingenieur_petrolier",
+    "libelle": "Ingénieur pétrolier",
+    "categorie": "autre"
+  },
+  {
+    "code": "ingenieur_reseaux_et_telecoms",
+    "libelle": "Ingénieur réseaux et télécoms",
+    "categorie": "autre"
+  },
+  {
+    "code": "inspecteur_voyageur_commerce",
+    "libelle": "Inspecteur commercial ou voyageur de commerce",
+    "categorie": "inspecteur_voyageur_commerce"
+  },
+  {
+    "code": "inspecteur_des_impots",
+    "libelle": "Inspecteur des impôts",
+    "categorie": "autre"
+  },
+  {
+    "code": "instituteur",
+    "libelle": "Instituteur",
+    "categorie": "autre"
+  },
+  {
+    "code": "interprete",
+    "libelle": "Interprète",
+    "categorie": "autre"
+  },
+  {
+    "code": "jardinier",
+    "libelle": "Jardinier",
+    "categorie": "autre"
+  },
+  {
+    "code": "journaliste",
+    "libelle": "Journaliste",
+    "categorie": "autre"
+  },
+  {
+    "code": "juriste_d_entreprise",
+    "libelle": "Juriste d'entreprise",
+    "categorie": "autre"
+  },
+  {
+    "code": "kinesitherapeute",
+    "libelle": "Kinésithérapeute",
+    "categorie": "autre"
+  },
+  {
+    "code": "laveur_de_voitures",
+    "libelle": "Laveur de voitures",
+    "categorie": "autre"
+  },
+  {
+    "code": "livreur",
+    "libelle": "Livreur",
+    "categorie": "autre"
+  },
+  {
+    "code": "logisticien",
+    "libelle": "Logisticien",
+    "categorie": "autre"
+  },
+  {
+    "code": "macon",
+    "libelle": "Maçon",
+    "categorie": "autre"
+  },
+  {
+    "code": "magasinier",
+    "libelle": "Magasinier",
+    "categorie": "autre"
+  },
+  {
+    "code": "magistrat",
+    "libelle": "Magistrat",
+    "categorie": "autre"
+  },
+  {
+    "code": "maquilleur",
+    "libelle": "Maquilleur",
+    "categorie": "autre"
+  },
+  {
+    "code": "maraicher",
+    "libelle": "Maraîcher",
+    "categorie": "autre"
+  },
+  {
+    "code": "marin",
+    "libelle": "Marin",
+    "categorie": "autre"
+  },
+  {
+    "code": "mecanicien_automobile",
+    "libelle": "Mécanicien automobile",
+    "categorie": "autre"
+  },
+  {
+    "code": "medecin_generaliste",
+    "libelle": "Médecin généraliste",
+    "categorie": "autre"
+  },
+  {
+    "code": "clerge",
+    "libelle": "Membre du clergé",
+    "categorie": "clerge"
+  },
+  {
+    "code": "menagere",
+    "libelle": "Ménagère",
+    "categorie": "autre"
+  },
+  {
+    "code": "menuisier",
+    "libelle": "Menuisier",
+    "categorie": "autre"
+  },
+  {
+    "code": "militaire",
+    "libelle": "Militaire",
+    "categorie": "autre"
+  },
+  {
+    "code": "modeliste",
+    "libelle": "Modéliste",
+    "categorie": "autre"
+  },
+  {
+    "code": "monteur_video",
+    "libelle": "Monteur vidéo",
+    "categorie": "autre"
+  },
+  {
+    "code": "musicien",
+    "libelle": "Musicien",
+    "categorie": "autre"
+  },
+  {
+    "code": "notaire",
+    "libelle": "Notaire",
+    "categorie": "autre"
+  },
+  {
+    "code": "operateur_de_production",
+    "libelle": "Opérateur de production",
+    "categorie": "autre"
+  },
+  {
+    "code": "opticien",
+    "libelle": "Opticien",
+    "categorie": "autre"
+  },
+  {
+    "code": "orpailleur",
+    "libelle": "Orpailleur",
+    "categorie": "autre"
+  },
+  {
+    "code": "patissier",
+    "libelle": "Pâtissier",
+    "categorie": "autre"
+  },
+  {
+    "code": "pecheur",
+    "libelle": "Pêcheur",
+    "categorie": "autre"
+  },
+  {
+    "code": "pediatre",
+    "libelle": "Pédiatre",
+    "categorie": "autre"
+  },
+  {
+    "code": "peintre_auto",
+    "libelle": "Peintre auto",
+    "categorie": "autre"
+  },
+  {
+    "code": "peintre_en_batiment",
+    "libelle": "Peintre en bâtiment",
+    "categorie": "autre"
+  },
+  {
+    "code": "pharmacien",
+    "libelle": "Pharmacien",
+    "categorie": "autre"
+  },
+  {
+    "code": "photographe",
+    "libelle": "Photographe",
+    "categorie": "autre"
+  },
+  {
+    "code": "photographe_reporter",
+    "libelle": "Photographe reporter",
+    "categorie": "photographe_reporter"
+  },
+  {
+    "code": "pilote_d_avion",
+    "libelle": "Pilote d'avion",
+    "categorie": "autre"
+  },
+  {
+    "code": "pisciculteur",
+    "libelle": "Pisciculteur",
+    "categorie": "autre"
+  },
+  {
+    "code": "planteur",
+    "libelle": "Planteur",
+    "categorie": "autre"
+  },
+  {
+    "code": "plombier",
+    "libelle": "Plombier",
+    "categorie": "autre"
+  },
+  {
+    "code": "policier",
+    "libelle": "Policier",
+    "categorie": "autre"
+  },
+  {
+    "code": "potier",
+    "libelle": "Potier",
+    "categorie": "autre"
+  },
+  {
+    "code": "pressing",
+    "libelle": "Pressing",
+    "categorie": "autre"
+  },
+  {
+    "code": "professeur_des_lycees_et_colleges",
+    "libelle": "Professeur des lycées et collèges",
+    "categorie": "autre"
+  },
+  {
+    "code": "psychologue",
+    "libelle": "Psychologue",
+    "categorie": "autre"
+  },
+  {
+    "code": "publicite",
+    "libelle": "Publiciste, agence ou agent de publicité",
+    "categorie": "publicite"
+  },
+  {
+    "code": "realisateur",
+    "libelle": "Réalisateur",
+    "categorie": "autre"
+  },
+  {
+    "code": "receptionniste",
+    "libelle": "Réceptionniste",
+    "categorie": "autre"
+  },
+  {
+    "code": "redacteur_web",
+    "libelle": "Rédacteur web",
+    "categorie": "autre"
+  },
+  {
+    "code": "reparateur_de_telephones_et_ordinateurs",
+    "libelle": "Réparateur de téléphones et ordinateurs",
+    "categorie": "autre"
+  },
+  {
+    "code": "representant_inspecteur_ventes",
+    "libelle": "Représentant commercial ou inspecteur des ventes",
+    "categorie": "representant_inspecteur_ventes"
+  },
+  {
+    "code": "sage_femme",
+    "libelle": "Sage-femme",
+    "categorie": "autre"
+  },
+  {
+    "code": "sapeur_pompier",
+    "libelle": "Sapeur-pompier",
+    "categorie": "autre"
+  },
+  {
+    "code": "sculpteur",
+    "libelle": "Sculpteur",
+    "categorie": "autre"
+  },
+  {
+    "code": "serveur",
+    "libelle": "Serveur",
+    "categorie": "autre"
+  },
+  {
+    "code": "gardiennage_securite",
+    "libelle": "Société de gardiennage ou de sécurité",
+    "categorie": "gardiennage_securite"
+  },
+  {
+    "code": "soudeur",
+    "libelle": "Soudeur",
+    "categorie": "autre"
+  },
+  {
+    "code": "steward",
+    "libelle": "Steward",
+    "categorie": "autre"
+  },
+  {
+    "code": "styliste",
+    "libelle": "Styliste",
+    "categorie": "autre"
+  },
+  {
+    "code": "surveillant_general",
+    "libelle": "Surveillant général",
+    "categorie": "autre"
+  },
+  {
+    "code": "technicien_d_agriculture",
+    "libelle": "Technicien d'agriculture",
+    "categorie": "autre"
+  },
+  {
+    "code": "technicien_de_laboratoire",
+    "libelle": "Technicien de laboratoire",
+    "categorie": "autre"
+  },
+  {
+    "code": "technicien_de_maintenance_industrielle",
+    "libelle": "Technicien de maintenance industrielle",
+    "categorie": "autre"
+  },
+  {
+    "code": "teleconseiller",
+    "libelle": "Téléconseiller",
+    "categorie": "autre"
+  },
+  {
+    "code": "tolier",
+    "libelle": "Tôlier",
+    "categorie": "autre"
+  },
+  {
+    "code": "tradipraticien",
+    "libelle": "Tradipraticien",
+    "categorie": "autre"
+  },
+  {
+    "code": "traducteur",
+    "libelle": "Traducteur",
+    "categorie": "autre"
+  },
+  {
+    "code": "transitaire",
+    "libelle": "Transitaire",
+    "categorie": "autre"
+  },
+  {
+    "code": "tresseuse",
+    "libelle": "Tresseuse",
+    "categorie": "autre"
+  },
+  {
+    "code": "vannier",
+    "libelle": "Vannier",
+    "categorie": "autre"
+  },
+  {
+    "code": "vendeur",
+    "libelle": "Vendeur",
+    "categorie": "autre"
+  },
+  {
+    "code": "vendeur_de_beignets",
+    "libelle": "Vendeur de beignets",
+    "categorie": "autre"
+  },
+  {
+    "code": "veterinaire",
+    "libelle": "Vétérinaire",
+    "categorie": "autre"
+  },
+  {
+    "code": "vigile",
+    "libelle": "Vigile",
+    "categorie": "autre"
+  },
+  {
+    "code": "vitrier",
+    "libelle": "Vitrier",
+    "categorie": "autre"
+  },
+  {
+    "code": "vulcanisateur",
+    "libelle": "Vulcanisateur",
+    "categorie": "autre"
+  }
+]

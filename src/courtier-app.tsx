@@ -64,6 +64,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
 import { Claim, DemoData, Opportunity, Policy, Proposal, companies, products, users } from "@/src/demo-data";
 import { UnassignedRequests } from "./unassigned-requests";
+import { MetierSelect } from "./components/metier-select";
+import { metierDuProfil, trouverMetier } from "./services/metiers";
 import { formulaireOffreAssisteeVide, preremplirOffreAssistee, type FormulaireOffreAssistee } from "./services/prefill-assisted-offer";
 import { PartenairesView } from "@/src/partenaires-view";
 import { apiBackoffice, CatalogueOffreAssistee, CLE_SYNCHRONISATION_SESSION_BACKOFFICE, ClientBackoffice, CompagniePartenaireResume, ContratAssuranceBackoffice, DetailDemandeClient, DetailSinistre, enregistrerSession, EVENEMENT_SESSION_BACKOFFICE_MODIFIEE, IntervenantDemande, LigneGarantiePolice, LigneTarificationOffre, MessageConversationBackoffice, MotifCorrectionDocument, OffreAssuranceBackoffice, OffreAssisteeCreation, oublierSession, PaiementCampayBackoffice, RapportActiviteBackoffice, ReponseAuthentification, ResumeDemandeClient, ResumeSinistre, RoleBackoffice, sessionBackofficeDoitEtreSynchronisee, StatutBackoffice, StatutDemande, StatutSinistre, SuiviFractionnement, TableauDeBordBackoffice, UtilisateurBackoffice } from "@/src/services/api-backoffice";
@@ -828,8 +830,7 @@ function dateIsoValide(valeur:string) {
 }
 
 function erreurProfilOffreAssistee(formulaire:FormulaireOffreAssistee) {
-  if(!formulaire.categorieProfession)return "Choisissez la profession du conducteur habituel.";
-  if(formulaire.categorieProfession==="autre"&&!formulaire.professionAutre.trim())return "Précisez le métier réel du conducteur habituel.";
+  if(!trouverMetier(formulaire.professionAutre))return "Choisissez le métier du conducteur habituel dans la liste.";
   if(!formulaire.dateNaissance||!formulaire.permisDelivreLe)return "Renseignez la date de naissance et la date d’obtention initiale du permis.";
   const aujourdhui=dateLocaleCourante();
   if(!dateIsoValide(formulaire.dateNaissance)||formulaire.dateNaissance>=aujourdhui)return "La date de naissance doit être une date passée valide.";
@@ -966,6 +967,8 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
   const ouvrirOffreAssistee=async()=>{
     if(!formulaireAssisteInitialise.current){
       const valeurs=preremplirOffreAssistee(donnees,conducteur);
+      const metier=metierDuProfil(valeurs.professionAutre,valeurs.categorieProfession);
+      if(metier){valeurs.professionAutre=metier.libelle;valeurs.categorieProfession=metier.categorie;}
       if(valeurs.categorieProfession&&!Object.hasOwn(professionsConducteur,valeurs.categorieProfession))valeurs.categorieProfession="";
       setFormulaireAssiste(valeurs);
       formulaireAssisteInitialise.current=true;
@@ -1134,7 +1137,7 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
       date_effet:formulaireAssiste.dateEffet,
       conducteur:{
         categorie_professionnelle:formulaireAssiste.categorieProfession as OffreAssisteeCreation["conducteur"]["categorie_professionnelle"],
-        profession:formulaireAssiste.categorieProfession==="autre"?formulaireAssiste.professionAutre.trim():professionsConducteur[formulaireAssiste.categorieProfession],
+        profession:formulaireAssiste.professionAutre.trim(),
         date_naissance:formulaireAssiste.dateNaissance,
         permis_delivre_le:formulaireAssiste.permisDelivreLe,
       },
@@ -1197,8 +1200,7 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
             <legend className="px-1 text-sm font-semibold">Conducteur habituel</legend>
             <p id="offre-assistee-profil-aide" className="text-xs text-muted-foreground">Ces informations sont nécessaires pour appliquer les règles du tarifaire à la date d’effet. Vérifiez les données reprises du dossier.</p>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="grid min-w-0 gap-2 sm:col-span-2"><Label htmlFor="offre-assistee-profession">Profession *</Label><Select value={formulaireAssiste.categorieProfession} onValueChange={(valeur)=>modifierAssiste("categorieProfession",valeur as FormulaireOffreAssistee["categorieProfession"])}><SelectTrigger id="offre-assistee-profession" className="h-auto min-h-9 w-full min-w-0 whitespace-normal text-left *:data-[slot=select-value]:block" aria-required="true" aria-describedby="offre-assistee-profil-aide"><SelectValue placeholder="Choisir la profession"/></SelectTrigger><SelectContent position="popper" className="max-w-[calc(100vw-3rem)]">{Object.entries(professionsConducteur).map(([code,libelle])=><SelectItem className="whitespace-normal break-words" key={code} value={code}>{libelle}</SelectItem>)}</SelectContent></Select></div>
-              {formulaireAssiste.categorieProfession==="autre"&&<div className="grid gap-2 sm:col-span-2"><Label htmlFor="offre-assistee-profession-autre">Métier réel *</Label><Input id="offre-assistee-profession-autre" maxLength={120} required value={formulaireAssiste.professionAutre} onChange={(event)=>modifierAssiste("professionAutre",event.target.value)} placeholder="Préciser le métier du conducteur"/></div>}
+              <div className="grid min-w-0 gap-2 sm:col-span-2"><Label htmlFor="offre-assistee-profession">Métier du conducteur habituel *</Label><MetierSelect id="offre-assistee-profession" value={formulaireAssiste.professionAutre} onChange={metier => setFormulaireAssiste(courant => ({...courant,categorieProfession:metier.categorie,professionAutre:metier.libelle}))} required disabled={creationAssistee} describedBy="offre-assistee-profil-aide"/></div>
               <div className="grid gap-2"><Label htmlFor="offre-assistee-naissance">Date de naissance *</Label><Input id="offre-assistee-naissance" type="date" max={dateLocaleCourante()} required value={formulaireAssiste.dateNaissance} onChange={(event)=>modifierAssiste("dateNaissance",event.target.value)}/></div>
               <div className="grid gap-2"><Label htmlFor="offre-assistee-permis">Date d’obtention initiale du permis *</Label><Input id="offre-assistee-permis" type="date" max={formulaireAssiste.dateEffet&&formulaireAssiste.dateEffet<dateLocaleCourante()?formulaireAssiste.dateEffet:dateLocaleCourante()} required value={formulaireAssiste.permisDelivreLe} onChange={(event)=>modifierAssiste("permisDelivreLe",event.target.value)}/></div>
             </div>
