@@ -64,6 +64,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
 import { Claim, DemoData, Opportunity, Policy, Proposal, companies, products, users } from "@/src/demo-data";
 import { UnassignedRequests } from "./unassigned-requests";
+import { formulaireOffreAssisteeVide, preremplirOffreAssistee, type FormulaireOffreAssistee } from "./services/prefill-assisted-offer";
 import { PartenairesView } from "@/src/partenaires-view";
 import { apiBackoffice, CatalogueOffreAssistee, CLE_SYNCHRONISATION_SESSION_BACKOFFICE, ClientBackoffice, CompagniePartenaireResume, ContratAssuranceBackoffice, DetailDemandeClient, DetailSinistre, enregistrerSession, EVENEMENT_SESSION_BACKOFFICE_MODIFIEE, IntervenantDemande, LigneGarantiePolice, LigneTarificationOffre, MessageConversationBackoffice, MotifCorrectionDocument, OffreAssuranceBackoffice, OffreAssisteeCreation, oublierSession, PaiementCampayBackoffice, RapportActiviteBackoffice, ReponseAuthentification, ResumeDemandeClient, ResumeSinistre, RoleBackoffice, sessionBackofficeDoitEtreSynchronisee, StatutBackoffice, StatutDemande, StatutSinistre, SuiviFractionnement, TableauDeBordBackoffice, UtilisateurBackoffice } from "@/src/services/api-backoffice";
 import { initialiserAlerteSonore, jouerAlerteSonore } from "@/src/services/notification-sound";
@@ -815,42 +816,6 @@ const placesOffreAssistee: Record<string,number[]> = {
   cat4b_transport_interurbain:[10,11,12,13,14,15,16,17,18,19,20,30,31,32,35,52,56,59,70],
 };
 
-type FormulaireOffreAssistee = {
-  compagnieId:string;
-  usage:string;
-  energie:""|"essence"|"diesel";
-  puissanceFiscale:string;
-  nombrePlaces:string;
-  zone:""|"A"|"B"|"C";
-  possedeRemorque:boolean;
-  dureeMois:string;
-  dateEffet:string;
-  categorieProfession:OffreAssisteeCreation["conducteur"]["categorie_professionnelle"]|"";
-  professionAutre:string;
-  dateNaissance:string;
-  permisDelivreLe:string;
-  garanties:string[];
-  recommandee:boolean;
-};
-
-const formulaireOffreAssisteeVide = ():FormulaireOffreAssistee => ({
-  compagnieId:"",
-  usage:"",
-  energie:"",
-  puissanceFiscale:"",
-  nombrePlaces:"",
-  zone:"",
-  possedeRemorque:false,
-  dureeMois:"",
-  dateEffet:"",
-  categorieProfession:"",
-  professionAutre:"",
-  dateNaissance:"",
-  permisDelivreLe:"",
-  garanties:[],
-  recommandee:true,
-});
-
 function dateLocaleCourante() {
   const maintenant=new Date();
   return new Date(maintenant.getTime()-maintenant.getTimezoneOffset()*60_000).toISOString().slice(0,10);
@@ -946,7 +911,7 @@ function DialoguePaiementManuel({demandeReference,offre,suivi:suiviRecu=null,onF
   </form></DialogContent></Dialog>;
 }
 
-function OffresDemandePanel({ reference, statutDemande, modePreparation, produit, sousType, conducteur, peutCreer, version, onActualiserDemande }: { reference:string; statutDemande:StatutDemande; modePreparation:"saisie_directe"|"delegation_courtier"; produit:string; sousType:"voiture"|"moto_deux_trois_roues"|null; conducteur:Record<string,unknown>; peutCreer:boolean; version:number; onActualiserDemande:()=>Promise<void> }) {
+function OffresDemandePanel({ reference, statutDemande, modePreparation, produit, sousType, conducteur, donnees = {}, peutCreer, version, onActualiserDemande }: { reference:string; statutDemande:StatutDemande; modePreparation:"saisie_directe"|"delegation_courtier"; produit:string; sousType:"voiture"|"moto_deux_trois_roues"|null; conducteur:Record<string,unknown>; donnees?:Record<string,unknown>; peutCreer:boolean; version:number; onActualiserDemande:()=>Promise<void> }) {
   const [offres,setOffres]=useState<OffreAssuranceBackoffice[]>([]);
   const [compagnies,setCompagnies]=useState<CompagniePartenaireResume[]>([]);
   const [chargement,setChargement]=useState(true);
@@ -974,6 +939,7 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
   const [chargementCatalogue,setChargementCatalogue]=useState(false);
   const [creationAssistee,setCreationAssistee]=useState(false);
   const [formulaireAssiste,setFormulaireAssiste]=useState<FormulaireOffreAssistee>(formulaireOffreAssisteeVide);
+  const formulaireAssisteInitialise=useRef(false);
   const demandeAutomobileVoiture=produit==="automobile"&&sousType==="voiture";
   const demandeDelegueeAutomobile=modePreparation==="delegation_courtier"&&demandeAutomobileVoiture;
 
@@ -985,28 +951,25 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
   const garantiesCategorie=catalogueSelectionne?.garanties_par_categorie[formulaireAssiste.usage]??catalogueSelectionne?.garanties??[];
   const dureesCategorie=catalogueSelectionne?.durees_par_categorie[formulaireAssiste.usage]??catalogueSelectionne?.durees_mois??[];
   const appliquerCatalogue=(catalogue:CatalogueOffreAssistee)=>{
-    const usage=catalogue.categories[0]??"";
-    const nombresPlaces=placesOffreAssistee[usage];
-    const garanties=catalogue.garanties_par_categorie[usage]??catalogue.garanties;
-    const durees=catalogue.durees_par_categorie[usage]??catalogue.durees_mois;
-    setFormulaireAssiste((courant)=>({
-      ...courant,
-      compagnieId:catalogue.compagnie_id,
-      usage,
-      nombrePlaces:nombresPlaces?.[0]?String(nombresPlaces[0]):"",
-      dureeMois:durees[0]?String(durees[0]):"",
-      garanties:garanties.filter((garantie)=>garantie.obligatoire).map((garantie)=>garantie.code),
-    }));
+    setFormulaireAssiste((courant)=>{
+      const usage=courant.usage||catalogue.categories[0]||"";
+      const nombresPlaces=placesOffreAssistee[usage];
+      const garanties=catalogue.garanties_par_categorie[usage]??catalogue.garanties;
+      const durees=catalogue.durees_par_categorie[usage]??catalogue.durees_mois;
+      return {...courant, compagnieId:catalogue.compagnie_id, usage,
+        nombrePlaces:courant.nombrePlaces||(nombresPlaces?.[0]?String(nombresPlaces[0]):""),
+        dureeMois:courant.dureeMois||(durees[0]?String(durees[0]):""),
+        garanties:[...new Set([...courant.garanties,...garanties.filter((garantie)=>garantie.obligatoire).map((garantie)=>garantie.code)])],
+      };
+    });
   };
   const ouvrirOffreAssistee=async()=>{
-    const categorie=typeof conducteur.categorie_professionnelle==="string"&&Object.hasOwn(professionsConducteur,conducteur.categorie_professionnelle)?conducteur.categorie_professionnelle as FormulaireOffreAssistee["categorieProfession"]:"";
-    setFormulaireAssiste((courant)=>({
-      ...courant,
-      categorieProfession:courant.categorieProfession||categorie,
-      professionAutre:courant.professionAutre||(typeof conducteur.profession==="string"?conducteur.profession:""),
-      dateNaissance:courant.dateNaissance||(typeof conducteur.date_naissance==="string"?conducteur.date_naissance:""),
-      permisDelivreLe:courant.permisDelivreLe||(typeof conducteur.permis_delivre_le==="string"?conducteur.permis_delivre_le:""),
-    }));
+    if(!formulaireAssisteInitialise.current){
+      const valeurs=preremplirOffreAssistee(donnees,conducteur);
+      if(valeurs.categorieProfession&&!Object.hasOwn(professionsConducteur,valeurs.categorieProfession))valeurs.categorieProfession="";
+      setFormulaireAssiste(valeurs);
+      formulaireAssisteInitialise.current=true;
+    }
     setOffreAssisteeOuverte(true);
     if(catalogueAssiste.length)return;
     setChargementCatalogue(true);
@@ -1132,8 +1095,17 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
     }catch(cause){toast.error(cause instanceof Error?cause.message:"L’offre n’a pas pu être créée.");}finally{setEnregistrement(false);}
   };
   const erreurProfilAssiste=erreurProfilOffreAssistee(formulaireAssiste);
+  const incompatibiliteCatalogue=Boolean(catalogueSelectionne&&(
+    !catalogueSelectionne.categories.includes(formulaireAssiste.usage)||
+    !dureesCategorie.includes(Number(formulaireAssiste.dureeMois))||
+    (placesOffreAssistee[formulaireAssiste.usage]&&!placesOffreAssistee[formulaireAssiste.usage].includes(Number(formulaireAssiste.nombrePlaces)))||
+    formulaireAssiste.garanties.some((code)=>!garantiesCategorie.some((garantie)=>garantie.code===code))
+  ));
   const valideAssiste=Boolean(
     catalogueSelectionne&&
+    catalogueSelectionne.categories.includes(formulaireAssiste.usage)&&
+    dureesCategorie.includes(Number(formulaireAssiste.dureeMois))&&
+    formulaireAssiste.garanties.every((code)=>garantiesCategorie.some((garantie)=>garantie.code===code))&&
     formulaireAssiste.usage&&
     formulaireAssiste.energie&&
     Number.isInteger(Number(formulaireAssiste.puissanceFiscale))&&
@@ -1141,6 +1113,7 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
     Number(formulaireAssiste.puissanceFiscale)<=99&&
     Number.isInteger(Number(formulaireAssiste.nombrePlaces))&&
     Number(formulaireAssiste.nombrePlaces)>=1&&
+    (!placesOffreAssistee[formulaireAssiste.usage]||placesOffreAssistee[formulaireAssiste.usage].includes(Number(formulaireAssiste.nombrePlaces)))&&
     formulaireAssiste.zone&&
     formulaireAssiste.dureeMois&&
     dateIsoValide(formulaireAssiste.dateEffet)&&
@@ -1174,6 +1147,7 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
       toast.success(`L’offre ${offre.reference} a été calculée. Vérifiez-la avant de l’envoyer.`);
       setOffreAssisteeOuverte(false);
       setFormulaireAssiste(formulaireOffreAssisteeVide());
+      formulaireAssisteInitialise.current=false;
       setCatalogueAssiste([]);
       await charger();
     }catch(cause){toast.error(cause instanceof Error?cause.message:"L’offre n’a pas pu être calculée.");}
@@ -1218,6 +1192,7 @@ function OffresDemandePanel({ reference, statutDemande, modePreparation, produit
           <label><Label>Remorque</Label><Select value={formulaireAssiste.possedeRemorque?"oui":"non"} onValueChange={(valeur)=>modifierAssiste("possedeRemorque",valeur==="oui")}><SelectTrigger className="w-full"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="non">Sans remorque</SelectItem><SelectItem value="oui">Avec remorque</SelectItem></SelectContent></Select></label>
           <label><Label>Durée</Label><Select value={formulaireAssiste.dureeMois} onValueChange={(valeur)=>modifierAssiste("dureeMois",valeur)}><SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner"/></SelectTrigger><SelectContent>{dureesCategorie.map((duree)=><SelectItem key={duree} value={String(duree)}>{duree} mois</SelectItem>)}</SelectContent></Select></label>
           <label><Label>Date d’effet</Label><Input type="date" value={formulaireAssiste.dateEffet} onChange={(event)=>modifierAssiste("dateEffet",event.target.value)}/></label>
+          {incompatibiliteCatalogue&&<p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 sm:col-span-2">La catégorie, la durée ou certaines garanties de cette demande ne sont pas disponibles dans ce tarifaire. Sélectionnez une compagnie compatible ou ajustez explicitement les critères de l’offre.</p>}
           <fieldset className="min-w-0 space-y-3 rounded-xl border bg-slate-50/60 p-4 sm:col-span-2">
             <legend className="px-1 text-sm font-semibold">Conducteur habituel</legend>
             <p id="offre-assistee-profil-aide" className="text-xs text-muted-foreground">Ces informations sont nécessaires pour appliquer les règles du tarifaire à la date d’effet. Vérifiez les données reprises du dossier.</p>
@@ -1282,7 +1257,7 @@ function RequestDetailView({ reference, version, utilisateur, onBack }: { refere
       {!peutTraiter&&<div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"><LockKeyhole className="shrink-0"/><span>{detail.responsable?`Seul ${detail.responsable.nom_complet}, responsable de ce dossier, peut le traiter.`:"Vous devez prendre cette demande en charge avant de valider ses documents, préparer des offres ou répondre au client."}</span></div>}
       <div className="request-page-grid"><main className="request-page-main"><FicheDemandeClient demande={detail} peutDeciderDocuments={peutTraiter} onActualiser={async()=>appliquer(await apiBackoffice.obtenirDemande(reference))}/><DiscussionDemandePanel reference={reference} peutRepondre={peutTraiter}/></main><aside className="request-page-aside">
         <Card className="request-page-panel"><CardContent className="p-0"><p className="eyebrow">Prise en charge</p>{detail.responsable?<><div className="request-owner"><div><span>Responsable actuel</span><strong>{estResponsable?"Vous":detail.responsable.nom_complet}</strong><small>{detail.prise_en_charge_le&&`Depuis le ${new Date(detail.prise_en_charge_le).toLocaleString("fr-FR",{dateStyle:"medium",timeStyle:"short"})}`}</small></div>{estGestionnaire&&<Button variant="outline" disabled={Boolean(actionEnCours)} onClick={()=>void liberer()}>{actionEnCours==="liberation"&&<LoaderCircle className="animate-spin"/>}Libérer</Button>}</div>{estResponsable&&!estGestionnaire&&<p className="request-lock-note"><LockKeyhole/>Cette prise en charge est définitive. Seul un administrateur peut libérer ou réaffecter la demande.</p>}</>:<div className="request-claim"><div><strong>Cette demande est dans la file commune.</strong><span>Le premier utilisateur qui la prend devient définitivement son responsable.</span></div><Button disabled={Boolean(actionEnCours)} onClick={()=>void prendreEnCharge()}>{actionEnCours==="prise"&&<LoaderCircle className="animate-spin"/>}Prendre en charge</Button></div>}{detail.responsable&&estGestionnaire&&<div className="request-reassign"><Label>Réaffectation exceptionnelle</Label><Select value={responsableCible} onValueChange={setResponsableCible}><SelectTrigger className="w-full"><SelectValue placeholder="Choisir un responsable"/></SelectTrigger><SelectContent>{intervenants.map((intervenant)=><SelectItem key={intervenant.id} value={intervenant.id}>{intervenant.nom_complet} · {libellesRoles[intervenant.role]}</SelectItem>)}</SelectContent></Select><Textarea value={motifReaffectation} onChange={(event)=>setMotifReaffectation(event.target.value)} placeholder="Motif obligatoire de la réaffectation"/><Button disabled={!responsableCible||responsableCible===detail.responsable.id||motifReaffectation.trim().length<3||Boolean(actionEnCours)} onClick={()=>void reaffecter()}>{actionEnCours==="reaffectation"&&<LoaderCircle className="animate-spin"/>}Réaffecter</Button></div>}</CardContent></Card>
-        <OffresDemandePanel key={reference} reference={reference} statutDemande={detail.statut} modePreparation={detail.mode_preparation} produit={detail.produit} sousType={detail.sous_type} conducteur={objetDemande(detail.donnees.conducteur)} version={version} peutCreer={peutTraiter} onActualiserDemande={async()=>appliquer(await apiBackoffice.obtenirDemande(reference))}/>
+        <OffresDemandePanel key={reference} reference={reference} statutDemande={detail.statut} modePreparation={detail.mode_preparation} produit={detail.produit} sousType={detail.sous_type} conducteur={objetDemande(detail.donnees.conducteur)} donnees={detail.donnees} version={version} peutCreer={peutTraiter} onActualiserDemande={async()=>appliquer(await apiBackoffice.obtenirDemande(reference))}/>
         <Card className="request-page-panel"><CardContent className="p-0"><p className="eyebrow">Avancement automatique</p><ParcoursDemande statut={detail.statut}/></CardContent></Card>
       </aside></div>
     </>}
